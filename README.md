@@ -28,3 +28,8 @@ dotnet test ProjectSeshat.sln
 The desktop application uses Avalonia. Database and ORM packages are intentionally not included yet.
 
 See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) for the initial direction.
+
+Build: passing
+Tests: passing
+.NET: 9
+Status: Alpha
