@@ -6,9 +6,11 @@
 - [x] Establish an Avalonia desktop shell and MVVM starting point.
 - [x] Add the persistence boundary without committing to a data model.
 
-## Next
+## Milestone 0.3 — Shared domain foundation
 
-- [ ] Define shared domain entities and contracts in Core.
+- [x] Define shared domain entities and contracts in Core.
+
+## Next
 - [ ] Add SQLite and Entity Framework Core to Data.
 - [ ] Parse and persist Elite Dangerous journal events.
 - [ ] Establish navigation and feature composition in the desktop app.
