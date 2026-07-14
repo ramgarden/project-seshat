@@ -1,0 +1,72 @@
+Microsoft Visual Studio Solution File, Format Version 12.00
+# Visual Studio Version 17
+VisualStudioVersion = 17.0.31903.59
+MinimumVisualStudioVersion = 10.0.40219.1
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.App", "src\ProjectSeshat.App\ProjectSeshat.App.csproj", "{10101010-1010-1010-1010-101010101010}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Core", "src\ProjectSeshat.Core\ProjectSeshat.Core.csproj", "{20202020-2020-2020-2020-202020202020}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Data", "src\ProjectSeshat.Data\ProjectSeshat.Data.csproj", "{30303030-3030-3030-3030-303030303030}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Journals", "src\ProjectSeshat.Journals\ProjectSeshat.Journals.csproj", "{40404040-4040-4040-4040-404040404040}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Atlas", "src\ProjectSeshat.Atlas\ProjectSeshat.Atlas.csproj", "{50505050-5050-5050-5050-505050505050}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.ThreadEngine", "src\ProjectSeshat.ThreadEngine\ProjectSeshat.ThreadEngine.csproj", "{60606060-6060-6060-6060-606060606060}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Codex", "src\ProjectSeshat.Codex\ProjectSeshat.Codex.csproj", "{70707070-7070-7070-7070-707070707070}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Observatory", "src\ProjectSeshat.Observatory\ProjectSeshat.Observatory.csproj", "{80808080-8080-8080-8080-808080808080}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Investigations", "src\ProjectSeshat.Investigations\ProjectSeshat.Investigations.csproj", "{90909090-9090-9090-9090-909090909090}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "ProjectSeshat.Tests", "tests\ProjectSeshat.Tests\ProjectSeshat.Tests.csproj", "{A0A0A0A0-A0A0-A0A0-A0A0-A0A0A0A0A0A0}"
+EndProject
+Global
+	GlobalSection(SolutionConfigurationPlatforms) = preSolution
+		Debug|Any CPU = Debug|Any CPU
+		Release|Any CPU = Release|Any CPU
+	EndGlobalSection
+	GlobalSection(ProjectConfigurationPlatforms) = postSolution
+		{10101010-1010-1010-1010-101010101010}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{10101010-1010-1010-1010-101010101010}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{10101010-1010-1010-1010-101010101010}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{10101010-1010-1010-1010-101010101010}.Release|Any CPU.Build.0 = Release|Any CPU
+		{20202020-2020-2020-2020-202020202020}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{20202020-2020-2020-2020-202020202020}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{20202020-2020-2020-2020-202020202020}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{20202020-2020-2020-2020-202020202020}.Release|Any CPU.Build.0 = Release|Any CPU
+		{30303030-3030-3030-3030-303030303030}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{30303030-3030-3030-3030-303030303030}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{30303030-3030-3030-3030-303030303030}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{30303030-3030-3030-3030-303030303030}.Release|Any CPU.Build.0 = Release|Any CPU
+		{40404040-4040-4040-4040-404040404040}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{40404040-4040-4040-4040-404040404040}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{40404040-4040-4040-4040-404040404040}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{40404040-4040-4040-4040-404040404040}.Release|Any CPU.Build.0 = Release|Any CPU
+		{50505050-5050-5050-5050-505050505050}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{50505050-5050-5050-5050-505050505050}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{50505050-5050-5050-5050-505050505050}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{50505050-5050-5050-5050-505050505050}.Release|Any CPU.Build.0 = Release|Any CPU
+		{60606060-6060-6060-6060-606060606060}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{60606060-6060-6060-6060-606060606060}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{60606060-6060-6060-6060-606060606060}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{60606060-6060-6060-6060-606060606060}.Release|Any CPU.Build.0 = Release|Any CPU
+		{70707070-7070-7070-7070-707070707070}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{70707070-7070-7070-7070-707070707070}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{70707070-7070-7070-7070-707070707070}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{70707070-7070-7070-7070-707070707070}.Release|Any CPU.Build.0 = Release|Any CPU
+		{80808080-8080-8080-8080-808080808080}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{80808080-8080-8080-8080-808080808080}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{80808080-8080-8080-8080-808080808080}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{80808080-8080-8080-8080-808080808080}.Release|Any CPU.Build.0 = Release|Any CPU
+		{90909090-9090-9090-9090-909090909090}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{90909090-9090-9090-9090-909090909090}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{90909090-9090-9090-9090-909090909090}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{90909090-9090-9090-9090-909090909090}.Release|Any CPU.Build.0 = Release|Any CPU
+		{A0A0A0A0-A0A0-A0A0-A0A0-A0A0A0A0A0A0}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{A0A0A0A0-A0A0-A0A0-A0A0-A0A0A0A0A0A0}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{A0A0A0A0-A0A0-A0A0-A0A0-A0A0A0A0A0A0}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{A0A0A0A0-A0A0-A0A0-A0A0-A0A0A0A0A0A0}.Release|Any CPU.Build.0 = Release|Any CPU
+	EndGlobalSection
+EndGlobal

@@ -1,0 +1,20 @@
+<Project Sdk="Microsoft.NET.Sdk">
+  <PropertyGroup>
+    <OutputType>WinExe</OutputType>
+  </PropertyGroup>
+  <ItemGroup>
+    <PackageReference Include="Avalonia" />
+    <PackageReference Include="Avalonia.Desktop" />
+    <PackageReference Include="Avalonia.Themes.Fluent" />
+  </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\ProjectSeshat.Core\ProjectSeshat.Core.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Data\ProjectSeshat.Data.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Journals\ProjectSeshat.Journals.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Atlas\ProjectSeshat.Atlas.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.ThreadEngine\ProjectSeshat.ThreadEngine.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Codex\ProjectSeshat.Codex.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Observatory\ProjectSeshat.Observatory.csproj" />
+    <ProjectReference Include="..\ProjectSeshat.Investigations\ProjectSeshat.Investigations.csproj" />
+  </ItemGroup>
+</Project>
