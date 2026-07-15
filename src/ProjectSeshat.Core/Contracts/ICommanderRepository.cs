@@ -8,4 +8,6 @@ public interface ICommanderRepository
     ValueTask<Commander?> FindByIdAsync(CommanderId id, CancellationToken cancellationToken = default);
 
     ValueTask SaveAsync(Commander commander, CancellationToken cancellationToken = default);
+
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

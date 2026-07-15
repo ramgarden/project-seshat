@@ -8,4 +8,6 @@ public interface IStarSystemRepository
     ValueTask<StarSystem?> FindByIdAsync(StarSystemId id, CancellationToken cancellationToken = default);
 
     ValueTask SaveAsync(StarSystem system, CancellationToken cancellationToken = default);
+
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

@@ -10,8 +10,13 @@
 
 - [x] Define shared domain entities and contracts in Core.
 
+## Milestone 0.4 — SQLite persistence foundation
+
+- [x] Add SQLite and Entity Framework Core support in Data.
+- [x] Implement repository-backed persistence for systems, commanders, and evidence.
+- [x] Wire the desktop dashboard to the data layer for live counts.
+
 ## Next
-- [ ] Add SQLite and Entity Framework Core to Data.
 - [ ] Parse and persist Elite Dangerous journal events.
 - [ ] Establish navigation and feature composition in the desktop app.
 

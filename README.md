@@ -2,6 +2,8 @@
 
 Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It provides a desktop foundation for working with commander journals, discoveries, spatial data, observations, and investigations.
 
+The project name comes from Seshat, the ancient Mesopotamian goddess of writing, wisdom, and surveying. The name fits the project’s role as a research companion for cataloguing systems, evidence, and discoveries across the galaxy.
+
 ## Solution layout
 
 - `src/ProjectSeshat.App` — Avalonia desktop shell and MVVM presentation layer.

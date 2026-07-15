@@ -8,4 +8,6 @@ public interface IEvidenceRepository
     ValueTask<EvidenceRecord?> FindByIdAsync(EvidenceId id, CancellationToken cancellationToken = default);
 
     ValueTask SaveAsync(EvidenceRecord evidence, CancellationToken cancellationToken = default);
+
+    Task<int> CountAsync(CancellationToken cancellationToken = default);
 }

@@ -20,4 +20,4 @@ Project Seshat follows a small, dependency-directed architecture. `ProjectSeshat
 - **Data** is the persistence boundary. SQLite and Entity Framework Core can be introduced here without leaking persistence concerns into Core or the UI.
 - **Tests** verify behavior through public contracts.
 
-The first UI is intentionally a small XAML-based Avalonia dashboard with a view model. It establishes the MVVM direction without adding navigation infrastructure prematurely.
+The first UI is intentionally a small XAML-based Avalonia dashboard with a view model. It establishes the MVVM direction without adding navigation infrastructure prematurely. The dashboard now reads from an EF Core + SQLite data layer for its live system, commander, and evidence counts.
