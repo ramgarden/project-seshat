@@ -16,8 +16,12 @@
 - [x] Implement repository-backed persistence for systems, commanders, and evidence.
 - [x] Wire the desktop dashboard to the data layer for live counts.
 
+## Milestone 0.5 — Journal ingestion foundation
+
+- [x] Parse and persist a narrow slice of Elite Dangerous journal events.
+- [x] Capture commander identity, star-system jumps, and scan evidence from journal lines.
+
 ## Next
-- [ ] Parse and persist Elite Dangerous journal events.
 - [ ] Establish navigation and feature composition in the desktop app.
 
 ## Research capabilities

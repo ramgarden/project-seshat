@@ -33,4 +33,7 @@ public sealed class StarSystemRepository : IStarSystemRepository
 
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await _context.StarSystems.CountAsync(cancellationToken);
+
+    public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
+        => await _context.StarSystems.AnyAsync(system => system.Name == name, cancellationToken);
 }

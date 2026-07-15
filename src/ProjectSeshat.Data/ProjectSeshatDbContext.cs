@@ -16,6 +16,8 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<EvidenceRecord> Evidence => Set<EvidenceRecord>();
 
+    public DbSet<JournalImportTracker> JournalImportTrackers => Set<JournalImportTracker>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StarSystem>(entity =>
@@ -45,6 +47,14 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Kind).HasConversion<string>();
             entity.Property(x => x.Summary).IsRequired();
             entity.Property(x => x.RecordedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<JournalImportTracker>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.FilePath).IsRequired();
+            entity.HasIndex(x => x.FilePath).IsUnique();
+            entity.Property(x => x.Fingerprint).IsRequired();
         });
     }
 }

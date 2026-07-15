@@ -7,7 +7,9 @@
     <PackageReference Include="xunit.runner.visualstudio"><PrivateAssets>all</PrivateAssets></PackageReference>
   </ItemGroup>
   <ItemGroup>
+    <ProjectReference Include="..\..\src\ProjectSeshat.App\ProjectSeshat.App.csproj" />
     <ProjectReference Include="..\..\src\ProjectSeshat.Core\ProjectSeshat.Core.csproj" />
     <ProjectReference Include="..\..\src\ProjectSeshat.Data\ProjectSeshat.Data.csproj" />
+    <ProjectReference Include="..\..\src\ProjectSeshat.Journals\ProjectSeshat.Journals.csproj" />
   </ItemGroup>
 </Project>

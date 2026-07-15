@@ -33,4 +33,7 @@ public sealed class CommanderRepository : ICommanderRepository
 
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await _context.Commanders.CountAsync(cancellationToken);
+
+    public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
+        => await _context.Commanders.AnyAsync(commander => commander.Name == name, cancellationToken);
 }

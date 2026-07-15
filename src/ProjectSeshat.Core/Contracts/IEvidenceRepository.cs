@@ -10,4 +10,6 @@ public interface IEvidenceRepository
     ValueTask SaveAsync(EvidenceRecord evidence, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsBySummaryAsync(string summary, CancellationToken cancellationToken = default);
 }

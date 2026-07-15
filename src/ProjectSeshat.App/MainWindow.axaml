@@ -21,6 +21,22 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
+    <Style Selector="Button">
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.12" />
+          <BrushTransition Property="Foreground" Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button:pointerover">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+    </Style>
+    <Style Selector="Button:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#F2FBFF" />
+    </Style>
   </Window.Styles>
 
   <Grid Margin="48" RowDefinitions="Auto,*,Auto">
@@ -37,33 +53,91 @@
     </StackPanel>
 
     <StackPanel Grid.Row="1" Margin="0,58,0,0" Spacing="18">
-      <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
-      <Grid ColumnDefinitions="*,18,*,18,*">
-        <Border Classes="stat-card" Grid.Column="0">
-          <StackPanel Spacing="10">
-            <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
-            <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+      <StackPanel Orientation="Horizontal" Spacing="12">
+        <Button Content="Load journal files"
+                Command="{Binding LoadJournalFilesCommand}"
+                HorizontalAlignment="Left"
+                Padding="16,10"
+                Background="#36C5F0"
+                Foreground="#08111D" />
+        <Button Content="Toggle explore view"
+                Command="{Binding ToggleExploreViewCommand}"
+                HorizontalAlignment="Left"
+                Padding="16,10"
+                Background="#0E1D2E"
+                Foreground="#E5F5FF" />
+      </StackPanel>
+
+      <Border IsVisible="{Binding !ShowExploreView}" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
+        <StackPanel Spacing="18">
+          <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
+          <Grid ColumnDefinitions="*,18,*,18,*">
+            <Border Classes="stat-card" Grid.Column="0">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
+                <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat-card" Grid.Column="2">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
+                <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+              </StackPanel>
+            </Border>
+            <Border Classes="stat-card" Grid.Column="4">
+              <StackPanel Spacing="10">
+                <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
+                <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+              </StackPanel>
+            </Border>
+          </Grid>
+        </StackPanel>
+      </Border>
+
+      <Border IsVisible="{Binding ShowExploreView}" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
+        <Grid ColumnDefinitions="320,*" RowDefinitions="Auto,*">
+          <StackPanel Grid.Row="0" Grid.Column="0" Spacing="12">
+            <TextBlock Classes="section-label" Text="EXPLORATION" />
+            <TextBlock Text="{Binding ExplorationSummary}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
           </StackPanel>
-        </Border>
-        <Border Classes="stat-card" Grid.Column="2">
-          <StackPanel Spacing="10">
-            <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
-            <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+
+          <ListBox Grid.Row="1" Grid.Column="0" Margin="0,8,12,0"
+                   ItemsSource="{Binding ExploreItems}"
+                   SelectedItem="{Binding SelectedExploreItem, Mode=TwoWay}"
+                   SelectionMode="Single"
+                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                   ScrollViewer.VerticalScrollBarVisibility="Auto">
+            <ListBox.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="8" Background="#08111D" CornerRadius="4">
+                  <StackPanel Spacing="4">
+                    <TextBlock Text="{Binding SystemName}" Foreground="#E5F5FF" FontWeight="SemiBold" />
+                    <TextBlock Text="{Binding Detail}" Foreground="#83B8D5" TextWrapping="Wrap" />
+                  </StackPanel>
+                </Border>
+              </DataTemplate>
+            </ListBox.ItemTemplate>
+          </ListBox>
+
+          <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="12" Margin="18,0,0,0">
+            <TextBlock Classes="section-label" Text="FOCUS" />
+            <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
+            <TextBlock Text="Use this view to understand what has already been searched and where deeper investigation may be useful." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
           </StackPanel>
-        </Border>
-        <Border Classes="stat-card" Grid.Column="4">
-          <StackPanel Spacing="10">
-            <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
-            <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-          </StackPanel>
-        </Border>
-      </Grid>
+        </Grid>
+      </Border>
     </StackPanel>
 
     <Border Grid.Row="2" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />
-        <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="15" VerticalAlignment="Center" />
+      <StackPanel Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="15" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock Text="{Binding JournalPathStatus}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding LoadingProgress}" Foreground="#7DAAC4" FontSize="13" />
+        <TextBlock Text="{Binding ActiveFileName}" Foreground="#A8D4EA" FontSize="13" TextWrapping="Wrap" />
       </StackPanel>
     </Border>
   </Grid>

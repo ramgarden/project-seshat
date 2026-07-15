@@ -10,4 +10,6 @@ public interface IStarSystemRepository
     ValueTask SaveAsync(StarSystem system, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
 }

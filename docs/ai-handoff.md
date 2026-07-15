@@ -6,7 +6,7 @@ This document is the operational starting point for an AI coding agent continuin
 
 Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 9 desktop application using Avalonia and MVVM.
 
-Milestone 0.2 delivered a visible dashboard. Milestone 0.3 provides the shared domain model and storage contracts. Milestone 0.4 is now implemented with an EF Core + SQLite persistence boundary and the dashboard reads those repositories for its live statistics.
+Milestone 0.2 delivered a visible dashboard. Milestone 0.3 provides the shared domain model and storage contracts. Milestone 0.4 implemented an EF Core + SQLite persistence boundary, and Milestone 0.5 now adds a journal-importer slice that can persist basic commander, system, and scan-evidence events from Elite Dangerous journal text.
 
 The next planned product work is Elite Dangerous journal ingestion and persistence, followed by navigation and feature composition in the desktop app.
 

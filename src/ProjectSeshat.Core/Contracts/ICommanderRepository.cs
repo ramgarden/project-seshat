@@ -10,4 +10,6 @@ public interface ICommanderRepository
     ValueTask SaveAsync(Commander commander, CancellationToken cancellationToken = default);
 
     Task<int> CountAsync(CancellationToken cancellationToken = default);
+
+    Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
 }

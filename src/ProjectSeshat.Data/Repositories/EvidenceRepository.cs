@@ -33,4 +33,7 @@ public sealed class EvidenceRepository : IEvidenceRepository
 
     public async Task<int> CountAsync(CancellationToken cancellationToken = default)
         => await _context.Evidence.CountAsync(cancellationToken);
+
+    public async Task<bool> ExistsBySummaryAsync(string summary, CancellationToken cancellationToken = default)
+        => await _context.Evidence.AnyAsync(evidence => evidence.Summary == summary, cancellationToken);
 }
