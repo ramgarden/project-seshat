@@ -8,7 +8,7 @@ The project name comes from Seshat, the ancient Mesopotamian goddess of writing,
 
 - `src/ProjectSeshat.App` — Avalonia desktop shell and MVVM presentation layer.
 - `src/ProjectSeshat.Core` — shared domain abstractions with no application dependencies.
-- `src/ProjectSeshat.Data` — persistence boundary; SQLite and Entity Framework Core will be added later.
+- `src/ProjectSeshat.Data` — persistence boundary; implements SQLite and Entity Framework Core repositories.
 - `src/ProjectSeshat.Journals` — Elite Dangerous journal ingestion boundary.
 - `src/ProjectSeshat.Atlas` — spatial and astronomical data boundary.
 - `src/ProjectSeshat.ThreadEngine` — research-thread processing boundary.
@@ -27,7 +27,7 @@ dotnet build ProjectSeshat.sln
 dotnet test ProjectSeshat.sln
 ```
 
-The desktop application uses Avalonia. Database and ORM packages are intentionally not included yet.
+The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core.
 
 See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) for the initial direction.
 

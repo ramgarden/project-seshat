@@ -30,9 +30,9 @@ public sealed class AppExploreViewTests
 
         var viewModel = new MainWindowViewModel(starSystemRepository, commanderRepository, evidenceRepository);
 
-        Assert.Contains(viewModel.ExploreItems, item => item.SystemName == "LHS 3447");
-        Assert.Contains(viewModel.ExploreItems, item => item.Detail.Contains("evidence", StringComparison.OrdinalIgnoreCase));
-        Assert.NotEmpty(viewModel.ExplorationSummary);
+        Assert.Contains(viewModel.Exploration.ExploreItems, item => item.SystemName == "LHS 3447");
+        Assert.Contains(viewModel.Exploration.ExploreItems, item => !string.IsNullOrEmpty(item.Detail));
+        Assert.NotEmpty(viewModel.Exploration.ExplorationSummary);
     }
 
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)

@@ -6,9 +6,9 @@ This document is the operational starting point for an AI coding agent continuin
 
 Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 9 desktop application using Avalonia and MVVM.
 
-Milestone 0.2 delivered a visible dashboard. Milestone 0.3 provides the shared domain model and storage contracts. Milestone 0.4 implemented an EF Core + SQLite persistence boundary, and Milestone 0.5 now adds a journal-importer slice that can persist basic commander, system, and scan-evidence events from Elite Dangerous journal text.
+Milestone 0.2 delivered a visible dashboard. Milestone 0.3 provides the shared domain model and storage contracts. Milestone 0.4 implemented an EF Core + SQLite persistence boundary, and Milestone 0.5 adds a journal-importer slice that can persist basic commander, system, and scan-evidence events from Elite Dangerous journal text. Milestone 0.6 establishes sidebar navigation and splits the presentation into separate Dashboard and Exploration features.
 
-The next planned product work is Elite Dangerous journal ingestion and persistence, followed by navigation and feature composition in the desktop app.
+The next planned product work is modeling atlas, codex, and observation data.
 
 ## Quick start
 
@@ -27,7 +27,7 @@ Before changing anything, run `git status --short`: work may be intentionally un
 
 | Project | Responsibility | Current state |
 | --- | --- | --- |
-| `ProjectSeshat.App` | Avalonia desktop UI and presentation composition | Dashboard is implemented; no navigation or database wiring. |
+| `ProjectSeshat.App` | Avalonia desktop UI and presentation composition | Dashboard and Exploration views are implemented with a left-sidebar navigation shell. |
 | `ProjectSeshat.Core` | Stable domain model and contracts | Systems, commanders, evidence, and repository abstractions are implemented. |
 | `ProjectSeshat.Data` | Persistence boundary | Placeholder only; SQLite/EF Core is the next planned implementation. |
 | `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Placeholder only. |
@@ -69,9 +69,7 @@ Each repository contract currently defines `FindByIdAsync` and `SaveAsync`, acce
 
 ## Data layer status
 
-`ProjectSeshat.Data` is intentionally a placeholder. It currently has no database provider, EF Core context, migrations, repositories, or production connection-string configuration.
-
-The next Data milestone should add `Microsoft.EntityFrameworkCore.Sqlite` through `Directory.Packages.props`, implement the three Core repository contracts, and define a deliberate database-file location and context lifetime in the App composition root. Do not introduce a database dependency into Core.
+`ProjectSeshat.Data` is implemented using SQLite and EF Core. It defines the EF entities, database context, and implements the three repository contracts defined in Core.
 
 ## Desktop application
 
@@ -110,15 +108,11 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the roadmap order unless the user explicitly reprioritizes:
+Follow the roadmap order:
 
-1. Implement SQLite and Entity Framework Core in `ProjectSeshat.Data` behind the existing Core repository contracts.
-2. Define the App composition root, database location, and context lifetime without putting data access in view models.
-3. Design a narrow journal-ingestion contract in `ProjectSeshat.Journals`; do not parse files directly from the UI.
-4. Define only the journal event data needed for the first persistence slice, then extend Core contracts if necessary.
-5. Introduce navigation when there is a concrete second workflow to navigate to.
-
-Before implementing any of these, confirm the requested scope. Avoid adding Atlas, Codex, Observatory, ThreadEngine, or Investigations functionality speculatively.
+1. Model atlas, codex, and observation data in `ProjectSeshat.Atlas` and `ProjectSeshat.Codex`.
+2. Build research-thread workflows.
+3. Support evidence capture and investigations.
 
 ## Documentation maintenance
 

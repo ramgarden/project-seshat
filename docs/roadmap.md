@@ -21,10 +21,11 @@
 - [x] Parse and persist a narrow slice of Elite Dangerous journal events.
 - [x] Capture commander identity, star-system jumps, and scan evidence from journal lines.
 
-## Next
-- [ ] Establish navigation and feature composition in the desktop app.
+## Milestone 0.6 — Navigation and feature composition
 
-## Research capabilities
+- [x] Establish navigation and feature composition in the desktop app.
+
+## Next
 
 - [ ] Model atlas, codex, and observation data.
 - [ ] Build research-thread workflows.

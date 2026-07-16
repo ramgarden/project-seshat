@@ -3,142 +3,89 @@
         x:Class="ProjectSeshat.App.MainWindow"
         Width="1120"
         Height="720"
-        MinWidth="840"
-        MinHeight="560"
+        MinWidth="960"
+        MinHeight="600"
         Background="#08111D"
         Title="{Binding WindowTitle}">
   <Window.Styles>
-    <Style Selector="Border.stat-card">
-      <Setter Property="Background" Value="#0E1D2E" />
-      <Setter Property="BorderBrush" Value="#1A4D67" />
-      <Setter Property="BorderThickness" Value="1" />
-      <Setter Property="CornerRadius" Value="6" />
-      <Setter Property="Padding" Value="22" />
-    </Style>
-    <Style Selector="TextBlock.section-label">
-      <Setter Property="Foreground" Value="#7DAAC4" />
-      <Setter Property="FontSize" Value="12" />
+    <Style Selector="Button.nav-btn">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#83B8D5" />
+      <Setter Property="HorizontalAlignment" Value="Stretch" />
+      <Setter Property="HorizontalContentAlignment" Value="Left" />
+      <Setter Property="Padding" Value="16,12" />
+      <Setter Property="FontSize" Value="14" />
       <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="LetterSpacing" Value="1.4" />
-    </Style>
-    <Style Selector="Button">
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Transitions">
         <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.12" />
-          <BrushTransition Property="Foreground" Duration="0:0:0.12" />
+          <BrushTransition Property="Background" Duration="0:0:0.1" />
+          <BrushTransition Property="Foreground" Duration="0:0:0.1" />
         </Transitions>
       </Setter>
     </Style>
-    <Style Selector="Button:pointerover">
+    <Style Selector="Button.nav-btn:pointerover">
+      <Setter Property="Background" Value="#1A2F45" />
+      <Setter Property="Foreground" Value="#E5F5FF" />
+    </Style>
+    <Style Selector="Button.nav-btn.active">
       <Setter Property="Background" Value="#1C8BC4" />
       <Setter Property="Foreground" Value="#03111B" />
     </Style>
-    <Style Selector="Button:pressed">
-      <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#F2FBFF" />
+    <!-- Override pointerover and pressed behaviors for active state to retain highlight -->
+    <Style Selector="Button.nav-btn.active:pointerover">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
     </Style>
   </Window.Styles>
 
-  <Grid Margin="48" RowDefinitions="Auto,*,Auto">
-    <StackPanel Spacing="8">
-      <TextBlock Text="{Binding ProjectName}"
-                 FontSize="34"
-                 FontWeight="Bold"
-                 Foreground="#E5F5FF"
-                 LetterSpacing="2" />
-      <TextBlock Text="{Binding PlatformName}"
-                 FontSize="17"
-                 Foreground="#83B8D5" />
-      <Border Height="2" Width="96" Margin="0,16,0,0" HorizontalAlignment="Left" Background="#36C5F0" />
-    </StackPanel>
-
-    <StackPanel Grid.Row="1" Margin="0,58,0,0" Spacing="18">
-      <StackPanel Orientation="Horizontal" Spacing="12">
-        <Button Content="Load journal files"
-                Command="{Binding LoadJournalFilesCommand}"
-                HorizontalAlignment="Left"
-                Padding="16,10"
-                Background="#36C5F0"
-                Foreground="#08111D" />
-        <Button Content="Toggle explore view"
-                Command="{Binding ToggleExploreViewCommand}"
-                HorizontalAlignment="Left"
-                Padding="16,10"
-                Background="#0E1D2E"
-                Foreground="#E5F5FF" />
-      </StackPanel>
-
-      <Border IsVisible="{Binding !ShowExploreView}" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
-        <StackPanel Spacing="18">
-          <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
-          <Grid ColumnDefinitions="*,18,*,18,*">
-            <Border Classes="stat-card" Grid.Column="0">
-              <StackPanel Spacing="10">
-                <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
-                <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stat-card" Grid.Column="2">
-              <StackPanel Spacing="10">
-                <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
-                <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-              </StackPanel>
-            </Border>
-            <Border Classes="stat-card" Grid.Column="4">
-              <StackPanel Spacing="10">
-                <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
-                <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-              </StackPanel>
-            </Border>
-          </Grid>
+  <Grid ColumnDefinitions="260,*">
+    <!-- Sidebar Navigation -->
+    <Border Grid.Column="0" Background="#0A1626" BorderBrush="#1A4D67" BorderThickness="0,0,1,0">
+      <Grid RowDefinitions="Auto,*,Auto" Margin="24,40">
+        <!-- Logo and Platform Branding -->
+        <StackPanel Grid.Row="0" Spacing="6">
+          <TextBlock Text="{Binding ProjectName}"
+                     FontSize="22"
+                     FontWeight="Bold"
+                     Foreground="#E5F5FF"
+                     LetterSpacing="1.5" />
+          <TextBlock Text="{Binding PlatformName}"
+                     FontSize="12"
+                     Foreground="#83B8D5" />
+          <Border Height="2" Width="48" Margin="0,16,0,0" HorizontalAlignment="Left" Background="#36C5F0" />
         </StackPanel>
-      </Border>
 
-      <Border IsVisible="{Binding ShowExploreView}" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
-        <Grid ColumnDefinitions="320,*" RowDefinitions="Auto,*">
-          <StackPanel Grid.Row="0" Grid.Column="0" Spacing="12">
-            <TextBlock Classes="section-label" Text="EXPLORATION" />
-            <TextBlock Text="{Binding ExplorationSummary}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
-          </StackPanel>
+        <!-- Navigation Options -->
+        <StackPanel Grid.Row="1" Margin="0,48,0,0" Spacing="8">
+          <Button Classes="nav-btn"
+                  Classes.active="{Binding IsDashboardActive}"
+                  Command="{Binding NavigateToDashboardCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="M3 13h8V3H3v10zm0 8h8v-6H3v6zm10 0h8V11h-8v10zm0-18v6h8V3h-8z" Width="16" Height="16" />
+              <TextBlock Text="Dashboard" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
 
-          <ListBox Grid.Row="1" Grid.Column="0" Margin="0,8,12,0"
-                   ItemsSource="{Binding ExploreItems}"
-                   SelectedItem="{Binding SelectedExploreItem, Mode=TwoWay}"
-                   SelectionMode="Single"
-                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                   ScrollViewer.VerticalScrollBarVisibility="Auto">
-            <ListBox.ItemTemplate>
-              <DataTemplate>
-                <Border Padding="8" Background="#08111D" CornerRadius="4">
-                  <StackPanel Spacing="4">
-                    <TextBlock Text="{Binding SystemName}" Foreground="#E5F5FF" FontWeight="SemiBold" />
-                    <TextBlock Text="{Binding Detail}" Foreground="#83B8D5" TextWrapping="Wrap" />
-                  </StackPanel>
-                </Border>
-              </DataTemplate>
-            </ListBox.ItemTemplate>
-          </ListBox>
-
-          <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="12" Margin="18,0,0,0">
-            <TextBlock Classes="section-label" Text="FOCUS" />
-            <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
-            <TextBlock Text="Use this view to understand what has already been searched and where deeper investigation may be useful." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
-          </StackPanel>
-        </Grid>
-      </Border>
-    </StackPanel>
-
-    <Border Grid.Row="2" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
-      <StackPanel Spacing="10">
-        <StackPanel Orientation="Horizontal" Spacing="12">
-          <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />
-          <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="15" VerticalAlignment="Center" />
+          <Button Classes="nav-btn"
+                  Classes.active="{Binding IsExplorationActive}"
+                  Command="{Binding NavigateToExplorationCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-1 17.93c-3.95-.49-7-3.85-7-7.93 0-.62.08-1.21.21-1.79L9 15v1c0 1.1.9 2 2 2v1.93zm6.9-2.54c-.26-.81-1-1.39-1.9-1.39h-1v-3c0-.55-.45-1-1-1H8v-2h2c.55 0 1-.45 1-1V7h2c1.1 0 2-.9 2-2v-.41c2.93 1.19 5 4.06 5 7.41 0 2.08-.8 3.97-2.1 5.39z" Width="16" Height="16" />
+              <TextBlock Text="Exploration" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </StackPanel>
-        <TextBlock Text="{Binding JournalPathStatus}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
-        <TextBlock Text="{Binding LoadingProgress}" Foreground="#7DAAC4" FontSize="13" />
-        <TextBlock Text="{Binding ActiveFileName}" Foreground="#A8D4EA" FontSize="13" TextWrapping="Wrap" />
-      </StackPanel>
+
+        <!-- Footer -->
+        <TextBlock Grid.Row="2" Text="v0.6.0-alpha" Foreground="#47738C" FontSize="11" HorizontalAlignment="Center" />
+      </Grid>
     </Border>
+
+    <!-- Main Workspace Content -->
+    <Grid Grid.Column="1" Margin="40">
+      <ContentControl Content="{Binding CurrentPage}" />
+    </Grid>
   </Grid>
 </Window>

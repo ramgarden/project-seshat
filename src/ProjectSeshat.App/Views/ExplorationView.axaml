@@ -1,0 +1,68 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.ExplorationView"
+             x:DataType="vm:ExplorationViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="Foreground" Value="#7DAAC4" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Padding" Value="0,0,0,8" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24">
+    <Grid ColumnDefinitions="340,*" RowDefinitions="Auto,*">
+      <StackPanel Grid.Row="0" Grid.Column="0" Spacing="12" Margin="0,0,0,16">
+        <TextBlock Classes="section-label" Text="EXPLORATION" />
+        <TextBlock Text="{Binding ExplorationSummary}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <ListBox Grid.Row="1" Grid.Column="0" Margin="0,8,16,0"
+               ItemsSource="{Binding ExploreItems}"
+               SelectedItem="{Binding SelectedExploreItem, Mode=TwoWay}"
+               SelectionMode="Single"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Border Padding="12" Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4">
+              <StackPanel Spacing="6">
+                <TextBlock Text="{Binding SystemName}" Foreground="#E5F5FF" FontWeight="SemiBold" FontSize="14" />
+                <TextBlock Text="{Binding Detail}" Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="16" Margin="24,0,0,0">
+        <TextBlock Classes="section-label" Text="FOCUS" />
+        <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+          <StackPanel Spacing="16">
+            <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
+            <Border Height="1" Background="#1A4D67" Margin="0,8" />
+            <TextBlock Text="Use this view to understand what has already been searched and where deeper investigation may be useful." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

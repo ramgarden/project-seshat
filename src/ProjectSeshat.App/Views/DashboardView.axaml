@@ -1,0 +1,90 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.DashboardView"
+             x:DataType="vm:DashboardViewModel">
+  <UserControl.Styles>
+    <Style Selector="Border.stat-card">
+      <Setter Property="Background" Value="#0E1D2E" />
+      <Setter Property="BorderBrush" Value="#1A4D67" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="6" />
+      <Setter Property="Padding" Value="22" />
+    </Style>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="Foreground" Value="#7DAAC4" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="Button.action-btn">
+      <Setter Property="Background" Value="#36C5F0" />
+      <Setter Property="Foreground" Value="#08111D" />
+      <Setter Property="Padding" Value="16,10" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="Transitions">
+        <Transitions>
+          <BrushTransition Property="Background" Duration="0:0:0.12" />
+          <BrushTransition Property="Foreground" Duration="0:0:0.12" />
+        </Transitions>
+      </Setter>
+    </Style>
+    <Style Selector="Button.action-btn:pointerover">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+    </Style>
+    <Style Selector="Button.action-btn:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#F2FBFF" />
+    </Style>
+  </UserControl.Styles>
+
+  <Grid RowDefinitions="Auto,*,Auto">
+    <!-- Top Action bar -->
+    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="0,0,0,20">
+      <Button Classes="action-btn"
+              Content="Load journal files"
+              Command="{Binding LoadJournalFilesCommand}" />
+    </StackPanel>
+
+    <!-- Main Stats Section -->
+    <Border Grid.Row="1" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
+      <StackPanel Spacing="18">
+        <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
+        <Grid ColumnDefinitions="*,18,*,18,*">
+          <Border Classes="stat-card" Grid.Column="0">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
+              <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat-card" Grid.Column="2">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
+              <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat-card" Grid.Column="4">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
+              <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+            </StackPanel>
+          </Border>
+        </Grid>
+      </StackPanel>
+    </Border>
+
+    <!-- Ingestion Progress Panel at the bottom of the dashboard page -->
+    <Border Grid.Row="2" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
+      <StackPanel Spacing="10">
+        <StackPanel Orientation="Horizontal" Spacing="12">
+          <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="15" VerticalAlignment="Center" />
+        </StackPanel>
+        <TextBlock Text="{Binding JournalPathStatus}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+        <TextBlock Text="{Binding LoadingProgress}" Foreground="#7DAAC4" FontSize="13" />
+        <TextBlock Text="{Binding ActiveFileName}" Foreground="#A8D4EA" FontSize="13" TextWrapping="Wrap" />
+      </StackPanel>
+    </Border>
+  </Grid>
+</UserControl>
