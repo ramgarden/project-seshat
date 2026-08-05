@@ -30,12 +30,20 @@
       </Setter>
     </Style>
     <Style Selector="Button.action-btn:pointerover">
-      <Setter Property="Background" Value="#1C8BC4" />
-      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="Background" Value="#2FA9DB" />
+      <Setter Property="Foreground" Value="#02101B" />
+    </Style>
+    <Style Selector="Button.action-btn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2FA9DB" />
+      <Setter Property="Foreground" Value="#02101B" />
     </Style>
     <Style Selector="Button.action-btn:pressed">
       <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#F2FBFF" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.action-btn:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
   </UserControl.Styles>
 

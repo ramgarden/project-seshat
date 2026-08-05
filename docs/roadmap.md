@@ -36,10 +36,15 @@
 - [x] Persist the database at a stable location (user AppData) so data survives relaunch.
 - [x] De-duplicate journal imports by content fingerprint (SHA-256), not just file path.
 
+## Milestone 0.9 — Evidence capture and investigations
+
+- [x] Capture evidence records attached to a research thread as an investigation.
+- [x] Review a thread's captured evidence in the desktop UI.
+
 ## Next
 
-- [ ] Support evidence capture and investigations.
 - [ ] Identify undiscovered regions via the Atlas boundary.
+- [ ] Introduce EF Core migrations so schema changes no longer require regenerating the database.
 
 ## Quality
 

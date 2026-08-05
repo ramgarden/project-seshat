@@ -55,6 +55,9 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Kind).HasConversion<string>();
             entity.Property(x => x.Summary).IsRequired();
             entity.Property(x => x.RecordedAt).IsRequired();
+            entity.Property(x => x.ThreadId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new ResearchThreadId(value.Value) : (ResearchThreadId?)null);
         });
 
         modelBuilder.Entity<JournalImportTracker>(entity =>

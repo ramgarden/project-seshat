@@ -8,9 +8,11 @@
         Background="#08111D"
         Title="{Binding WindowTitle}">
   <Window.Styles>
+    <!-- Navigation buttons: every state sets an explicit, high-contrast color so the
+         Fluent theme's default (light) hover can never hide the light text. -->
     <Style Selector="Button.nav-btn">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#83B8D5" />
+      <Setter Property="Foreground" Value="#9CC5DE" />
       <Setter Property="HorizontalAlignment" Value="Stretch" />
       <Setter Property="HorizontalContentAlignment" Value="Left" />
       <Setter Property="Padding" Value="16,12" />
@@ -26,17 +28,33 @@
       </Setter>
     </Style>
     <Style Selector="Button.nav-btn:pointerover">
-      <Setter Property="Background" Value="#1A2F45" />
-      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="Background" Value="#22405A" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.nav-btn:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#22405A" />
+    </Style>
+    <Style Selector="Button.nav-btn:pressed">
+      <Setter Property="Background" Value="#154F70" />
+      <Setter Property="Foreground" Value="#EAF7FF" />
+    </Style>
+    <Style Selector="Button.nav-btn:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#154F70" />
     </Style>
     <Style Selector="Button.nav-btn.active">
       <Setter Property="Background" Value="#1C8BC4" />
-      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="Foreground" Value="#02101B" />
     </Style>
-    <!-- Override pointerover and pressed behaviors for active state to retain highlight -->
     <Style Selector="Button.nav-btn.active:pointerover">
-      <Setter Property="Background" Value="#1C8BC4" />
-      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="Background" Value="#2FA9DB" />
+      <Setter Property="Foreground" Value="#02101B" />
+    </Style>
+    <Style Selector="Button.nav-btn.active:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#2FA9DB" />
+    </Style>
+    <Style Selector="Button.nav-btn.active:pressed">
+      <Setter Property="Background" Value="#154F70" />
+      <Setter Property="Foreground" Value="#EAF7FF" />
     </Style>
   </Window.Styles>
 

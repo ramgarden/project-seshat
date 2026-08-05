@@ -36,4 +36,15 @@ public sealed class EvidenceRepository : IEvidenceRepository
 
     public async Task<bool> ExistsBySummaryAsync(string summary, CancellationToken cancellationToken = default)
         => await _context.Evidence.AnyAsync(evidence => evidence.Summary == summary, cancellationToken);
+
+    public async Task<IReadOnlyList<EvidenceRecord>> FindByThreadIdAsync(ResearchThreadId threadId, CancellationToken cancellationToken = default)
+    {
+        var results = await _context.Evidence
+            .Where(evidence => evidence.ThreadId == threadId)
+            .ToListAsync(cancellationToken);
+        return results.OrderByDescending(evidence => evidence.RecordedAt).ToList();
+    }
+
+    public Task<int> CountByThreadIdAsync(ResearchThreadId threadId, CancellationToken cancellationToken = default)
+        => _context.Evidence.CountAsync(evidence => evidence.ThreadId == threadId, cancellationToken);
 }

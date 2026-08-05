@@ -44,17 +44,39 @@
     <Style Selector="Button.action:pointerover">
       <Setter Property="Background" Value="#36C5F0" />
     </Style>
+    <Style Selector="Button.action:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.action:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.action:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
     <Style Selector="Button.ghost">
       <Setter Property="Background" Value="Transparent" />
-      <Setter Property="Foreground" Value="#83B8D5" />
-      <Setter Property="BorderBrush" Value="#1A4D67" />
+      <Setter Property="Foreground" Value="#D2EAF7" />
+      <Setter Property="BorderBrush" Value="#4A9CC7" />
       <Setter Property="BorderThickness" Value="1" />
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="14,8" />
       <Setter Property="Margin" Value="0,0,8,0" />
     </Style>
     <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="Background" Value="#142C41" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#142C41" />
+    </Style>
+    <Style Selector="Button.ghost:pressed">
+      <Setter Property="Background" Value="#0E1F30" />
+      <Setter Property="Foreground" Value="#D2EAF7" />
+    </Style>
+    <Style Selector="Button.ghost:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0E1F30" />
     </Style>
   </UserControl.Styles>
 
@@ -121,6 +143,38 @@
               </Button>
             </StackPanel>
             <TextBlock Text="Move a thread from Open through Investigating to Concluded (then Archived). Reopen returns a closed thread to Open." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            <Border Height="1" Background="#1A4D67" Margin="0,8" />
+            <TextBlock Classes="section-label" Text="{Binding EvidenceHeading}" />
+            <StackPanel Orientation="Horizontal" Spacing="8">
+              <ComboBox Classes="entry" Width="130" VerticalAlignment="Top"
+                        ItemsSource="{Binding EvidenceKinds}"
+                        SelectedItem="{Binding SelectedEvidenceKindName, Mode=TwoWay}" />
+              <TextBox Classes="entry" MinWidth="180" VerticalAlignment="Top"
+                       Watermark="Evidence summary..."
+                       Text="{Binding NewEvidenceSummary}" AcceptsReturn="True" MinHeight="34" />
+              <Button Classes="action" VerticalAlignment="Top" Command="{Binding CaptureEvidenceCommand}">
+                <TextBlock Text="Capture" />
+              </Button>
+            </StackPanel>
+            <ListBox ItemsSource="{Binding EvidenceItems}"
+                     MaxHeight="180"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <Border Padding="10" Background="#0A1626" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4">
+                    <StackPanel Spacing="4">
+                      <StackPanel Orientation="Horizontal" Spacing="10">
+                        <TextBlock Text="{Binding KindLabel}" Foreground="#36C5F0" FontSize="12" />
+                        <TextBlock Text="{Binding RecordedAt, StringFormat={} {0:yyyy-MM-dd HH:mm}}" Foreground="#47738C" FontSize="12" />
+                      </StackPanel>
+                      <TextBlock Text="{Binding Summary}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
+                    </StackPanel>
+                  </Border>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <TextBlock Text="Capture scans, discoveries, and investigation findings as evidence attached to this research thread." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </StackPanel>

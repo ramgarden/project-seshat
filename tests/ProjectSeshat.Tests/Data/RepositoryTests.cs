@@ -131,6 +131,30 @@ public sealed class RepositoryTests
         Assert.Equal(0, await repository.CountNeedingSurfaceScanAsync());
     }
 
+    [Fact]
+    public async Task EvidenceRepository_RoundTripsThreadLinkedEvidence()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var repository = new EvidenceRepository(context);
+        var threadId = new ResearchThreadId(Guid.NewGuid());
+        var evidence = new EvidenceRecord(
+            new EvidenceId(Guid.NewGuid()),
+            EvidenceKind.Investigation,
+            "Mapped candidate surface",
+            DateTimeOffset.UtcNow,
+            threadId);
+
+        await repository.SaveAsync(evidence);
+
+        Assert.Equal(1, await repository.CountByThreadIdAsync(threadId));
+        var found = await repository.FindByThreadIdAsync(threadId);
+        Assert.Single(found);
+        Assert.Equal(evidence.Id, found[0].Id);
+    }
+
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<ProjectSeshatDbContext>()

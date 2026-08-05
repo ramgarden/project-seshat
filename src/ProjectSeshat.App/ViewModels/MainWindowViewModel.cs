@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Input;
 using ProjectSeshat.Core.Contracts;
+using ProjectSeshat.Investigations;
 using ProjectSeshat.Journals;
 using ProjectSeshat.ThreadEngine;
 
@@ -24,7 +25,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
-        ResearchThreadEngine? researchThreadEngine = null)
+        ResearchThreadEngine? researchThreadEngine = null,
+        InvestigationService? investigationService = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -42,7 +44,7 @@ public sealed class MainWindowViewModel : ViewModelBase
             evidenceRepository,
             celestialBodyRepository);
 
-        Threads = new ThreadsViewModel(researchThreadEngine);
+        Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
         // Coordinate data updates
         Dashboard.DataImported += (s, e) =>

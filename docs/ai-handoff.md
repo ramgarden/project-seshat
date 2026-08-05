@@ -114,6 +114,8 @@ Follow the roadmap order:
 2. Build research-thread workflows.
 3. Support evidence capture and investigations.
 
+Operational follow-up (not a feature milestone): the app currently uses `EnsureCreated()`, so every schema change requires regenerating the SQLite database and re-importing journals. Add EF Core migrations to `ProjectSeshat.Data` so future schema changes apply without data loss.
+
 ## Documentation maintenance
 
 Keep these documents current when changing the architecture or milestone state:

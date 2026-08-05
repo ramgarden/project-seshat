@@ -22,7 +22,8 @@ public sealed record EvidenceRecord(
     EvidenceId Id,
     EvidenceKind Kind,
     string Summary,
-    DateTimeOffset RecordedAt);
+    DateTimeOffset RecordedAt,
+    ResearchThreadId? ThreadId = null);
 
 // ── Atlas ────────────────────────────────────────────────────────────────────
 

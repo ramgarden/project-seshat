@@ -1,7 +1,9 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using ProjectSeshat.Core.Domain;
+using ProjectSeshat.Investigations;
 using ProjectSeshat.ThreadEngine;
 
 namespace ProjectSeshat.App.ViewModels;
@@ -10,22 +12,31 @@ namespace ProjectSeshat.App.ViewModels;
 public sealed class ThreadsViewModel : ViewModelBase
 {
     private readonly ResearchThreadEngine? _engine;
+    private readonly InvestigationService? _investigations;
     private string _newThreadSubject = string.Empty;
     private string _newThreadNotes = string.Empty;
+    private string _newEvidenceSummary = string.Empty;
+    private string _selectedEvidenceKindName = EvidenceKind.Observation.ToString();
     private string _statusMessage = "No threads yet. Create one to begin a line of enquiry.";
     private ThreadItem? _selectedThread;
 
-    public ThreadsViewModel(ResearchThreadEngine? engine)
+    public ThreadsViewModel(ResearchThreadEngine? engine, InvestigationService? investigations = null)
     {
         _engine = engine;
+        _investigations = investigations;
         CreateThreadCommand = new RelayCommand(CreateThread);
         AdvanceCommand = new RelayCommand(AdvanceThread);
         ReopenCommand = new RelayCommand(ReopenThread);
         ConcludeCommand = new RelayCommand(ConcludeThread);
+        CaptureEvidenceCommand = new RelayCommand(CaptureEvidence);
         RefreshThreads();
     }
 
     public ObservableCollection<ThreadItem> Threads { get; } = new();
+
+    public ObservableCollection<EvidenceItem> EvidenceItems { get; } = new();
+
+    public string[] EvidenceKinds { get; } = Enum.GetNames<EvidenceKind>();
 
     public string NewThreadSubject
     {
@@ -37,6 +48,18 @@ public sealed class ThreadsViewModel : ViewModelBase
     {
         get => _newThreadNotes;
         set => SetProperty(ref _newThreadNotes, value);
+    }
+
+    public string NewEvidenceSummary
+    {
+        get => _newEvidenceSummary;
+        set => SetProperty(ref _newEvidenceSummary, value);
+    }
+
+    public string SelectedEvidenceKindName
+    {
+        get => _selectedEvidenceKindName;
+        set => SetProperty(ref _selectedEvidenceKindName, value);
     }
 
     public string StatusMessage
@@ -63,6 +86,10 @@ public sealed class ThreadsViewModel : ViewModelBase
         ? "Select a research thread to review its subject, stage, and notes."
         : $"{SelectedThread.Subject} \u2014 {SelectedThread.StatusLabel}.\n{SelectedThread.DisplayNotes}";
 
+    public string EvidenceHeading => SelectedThread is null
+        ? "INVESTIGATION EVIDENCE"
+        : $"INVESTIGATION EVIDENCE ({EvidenceItems.Count})";
+
     public ICommand CreateThreadCommand { get; }
 
     public ICommand AdvanceCommand { get; }
@@ -70,6 +97,8 @@ public sealed class ThreadsViewModel : ViewModelBase
     public ICommand ReopenCommand { get; }
 
     public ICommand ConcludeCommand { get; }
+
+    public ICommand CaptureEvidenceCommand { get; }
 
     public void RefreshThreads()
     {
@@ -130,6 +159,72 @@ public sealed class ThreadsViewModel : ViewModelBase
         }
     }
 
+    private void CaptureEvidence()
+    {
+        if (_investigations is null || SelectedThread is null)
+        {
+            StatusMessage = "Select a research thread to attach investigation evidence.";
+            return;
+        }
+
+        if (string.IsNullOrWhiteSpace(NewEvidenceSummary))
+        {
+            StatusMessage = "Provide a summary before capturing evidence.";
+            return;
+        }
+
+        var kind = Enum.TryParse<EvidenceKind>(SelectedEvidenceKindName, out var parsed) ? parsed : EvidenceKind.Observation;
+        try
+        {
+            _investigations
+                .CaptureEvidenceAsync(SelectedThread.Id, kind, NewEvidenceSummary)
+                .GetAwaiter()
+                .GetResult();
+            NewEvidenceSummary = string.Empty;
+            StatusMessage = "Evidence captured.";
+            RefreshEvidence();
+        }
+        catch (Exception ex)
+        {
+            StatusMessage = $"Could not capture evidence: {ex.Message}";
+        }
+    }
+
+    private void SelectThread(ThreadItem? item)
+    {
+        EvidenceItems.Clear();
+        OnPropertyChanged(nameof(SelectedThreadTitle));
+        OnPropertyChanged(nameof(SelectedThreadDetail));
+
+        if (item is not null)
+        {
+            RefreshEvidence();
+        }
+        else
+        {
+            OnPropertyChanged(nameof(EvidenceHeading));
+        }
+    }
+
+    private void RefreshEvidence()
+    {
+        EvidenceItems.Clear();
+
+        if (_investigations is null || SelectedThread is null)
+        {
+            OnPropertyChanged(nameof(EvidenceHeading));
+            return;
+        }
+
+        var records = _investigations.GetEvidenceForThreadAsync(SelectedThread.Id).GetAwaiter().GetResult();
+        foreach (var record in records.OrderByDescending(r => r.RecordedAt))
+        {
+            EvidenceItems.Add(new EvidenceItem(record.Summary, record.Kind, record.RecordedAt));
+        }
+
+        OnPropertyChanged(nameof(EvidenceHeading));
+    }
+
     private void AdvanceThread()
     {
         if (_engine is null || SelectedThread is null)
@@ -187,12 +282,6 @@ public sealed class ThreadsViewModel : ViewModelBase
         }
     }
 
-    private void SelectThread(ThreadItem? item)
-    {
-        OnPropertyChanged(nameof(SelectedThreadTitle));
-        OnPropertyChanged(nameof(SelectedThreadDetail));
-    }
-
     private sealed class RelayCommand(Action execute) : ICommand
     {
         public event EventHandler? CanExecuteChanged
@@ -219,4 +308,9 @@ public sealed record ThreadItem(ResearchThreadId Id, string Subject, string? Not
     };
 
     public string DisplayNotes => string.IsNullOrWhiteSpace(Notes) ? "No notes recorded." : Notes;
+}
+
+public sealed record EvidenceItem(string Summary, EvidenceKind Kind, DateTimeOffset RecordedAt)
+{
+    public string KindLabel => Kind.ToString();
 }

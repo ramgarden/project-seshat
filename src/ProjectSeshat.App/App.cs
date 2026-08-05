@@ -5,6 +5,7 @@ using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Data;
 using ProjectSeshat.Data.Repositories;
+using ProjectSeshat.Investigations;
 using ProjectSeshat.Journals;
 using ProjectSeshat.ThreadEngine;
 
@@ -51,6 +52,7 @@ public sealed class App : Application
         var observationRepository = new ObservationRepository(context);
         var researchThreadRepository = new ResearchThreadRepository(context);
         var researchThreadEngine = new ResearchThreadEngine(researchThreadRepository);
+        var investigationService = new InvestigationService(evidenceRepository, researchThreadRepository);
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
 
@@ -64,7 +66,8 @@ public sealed class App : Application
             celestialBodyRepository,
             codexEntryRepository,
             observationRepository,
-            researchThreadEngine);
+            researchThreadEngine,
+            investigationService);
     }
 
     public static MainWindow CreateMainWindow() => new(CreateViewModel());

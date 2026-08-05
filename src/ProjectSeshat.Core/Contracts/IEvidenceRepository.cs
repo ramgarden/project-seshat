@@ -12,4 +12,8 @@ public interface IEvidenceRepository
     Task<int> CountAsync(CancellationToken cancellationToken = default);
 
     Task<bool> ExistsBySummaryAsync(string summary, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<EvidenceRecord>> FindByThreadIdAsync(ResearchThreadId threadId, CancellationToken cancellationToken = default);
+
+    Task<int> CountByThreadIdAsync(ResearchThreadId threadId, CancellationToken cancellationToken = default);
 }
