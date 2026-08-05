@@ -17,6 +17,9 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly ICommanderRepository _commanderRepository;
     private readonly IEvidenceRepository _evidenceRepository;
     private readonly IJournalImportTrackerRepository? _journalImportTrackerRepository;
+    private readonly ICelestialBodyRepository? _celestialBodyRepository;
+    private readonly ICodexEntryRepository? _codexEntryRepository;
+    private readonly IObservationRepository? _observationRepository;
     private readonly JournalPathResolver _journalPathResolver;
     private readonly JournalReader _journalReader;
 
@@ -27,6 +30,9 @@ public sealed class DashboardViewModel : ViewModelBase
     private int _systemsIndexedCount;
     private int _commanderRecordsCount;
     private int _evidenceRecordsCount;
+    private int _bodiesIndexedCount;
+    private int _codexEntriesCount;
+    private int _observationsCount;
     private bool _isLoading;
 
     public DashboardViewModel(
@@ -35,12 +41,18 @@ public sealed class DashboardViewModel : ViewModelBase
         IEvidenceRepository evidenceRepository,
         IJournalImportTrackerRepository? journalImportTrackerRepository = null,
         JournalPathResolver? journalPathResolver = null,
-        JournalReader? journalReader = null)
+        JournalReader? journalReader = null,
+        ICelestialBodyRepository? celestialBodyRepository = null,
+        ICodexEntryRepository? codexEntryRepository = null,
+        IObservationRepository? observationRepository = null)
     {
         _starSystemRepository = starSystemRepository;
         _commanderRepository = commanderRepository;
         _evidenceRepository = evidenceRepository;
         _journalImportTrackerRepository = journalImportTrackerRepository;
+        _celestialBodyRepository = celestialBodyRepository;
+        _codexEntryRepository = codexEntryRepository;
+        _observationRepository = observationRepository;
         _journalPathResolver = journalPathResolver ?? new JournalPathResolver();
         _journalReader = journalReader ?? new JournalReader();
 
@@ -52,6 +64,9 @@ public sealed class DashboardViewModel : ViewModelBase
     public string SystemsIndexedLabel => "SYSTEMS INDEXED";
     public string CommanderRecordsLabel => "COMMANDER RECORDS";
     public string EvidenceRecordsLabel => "EVIDENCE RECORDS";
+    public string BodiesIndexedLabel => "BODIES CATALOGUED";
+    public string CodexEntriesLabel => "CODEX ENTRIES";
+    public string ObservationsLabel => "OBSERVATIONS";
 
     public int SystemsIndexedCount
     {
@@ -69,6 +84,24 @@ public sealed class DashboardViewModel : ViewModelBase
     {
         get => _evidenceRecordsCount;
         private set => SetProperty(ref _evidenceRecordsCount, value);
+    }
+
+    public int BodiesIndexedCount
+    {
+        get => _bodiesIndexedCount;
+        private set => SetProperty(ref _bodiesIndexedCount, value);
+    }
+
+    public int CodexEntriesCount
+    {
+        get => _codexEntriesCount;
+        private set => SetProperty(ref _codexEntriesCount, value);
+    }
+
+    public int ObservationsCount
+    {
+        get => _observationsCount;
+        private set => SetProperty(ref _observationsCount, value);
     }
 
     public string StatusMessage
@@ -110,6 +143,9 @@ public sealed class DashboardViewModel : ViewModelBase
         SystemsIndexedCount = _starSystemRepository.CountAsync().GetAwaiter().GetResult();
         CommanderRecordsCount = _commanderRepository.CountAsync().GetAwaiter().GetResult();
         EvidenceRecordsCount = _evidenceRepository.CountAsync().GetAwaiter().GetResult();
+        BodiesIndexedCount = _celestialBodyRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
+        CodexEntriesCount = _codexEntryRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
+        ObservationsCount = _observationRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
     }
 
     private void LoadJournalFiles()
@@ -167,7 +203,9 @@ public sealed class DashboardViewModel : ViewModelBase
                         _evidenceRepository,
                         _journalImportTrackerRepository,
                         file,
-                        timeoutCts.Token);
+                        timeoutCts.Token,
+                        _celestialBodyRepository,
+                        _codexEntryRepository);
                 }
                 catch (OperationCanceledException)
                 {

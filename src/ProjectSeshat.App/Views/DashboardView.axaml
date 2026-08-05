@@ -51,6 +51,8 @@
     <Border Grid.Row="1" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
       <StackPanel Spacing="18">
         <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
+
+        <!-- Row 1: Systems / Commanders / Evidence -->
         <Grid ColumnDefinitions="*,18,*,18,*">
           <Border Classes="stat-card" Grid.Column="0">
             <StackPanel Spacing="10">
@@ -68,6 +70,28 @@
             <StackPanel Spacing="10">
               <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
               <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+            </StackPanel>
+          </Border>
+        </Grid>
+
+        <!-- Row 2: Bodies / Codex / Observations -->
+        <Grid ColumnDefinitions="*,18,*,18,*" Margin="0,4,0,0">
+          <Border Classes="stat-card" Grid.Column="0">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding BodiesIndexedLabel}" />
+              <TextBlock Text="{Binding BodiesIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat-card" Grid.Column="2">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding CodexEntriesLabel}" />
+              <TextBlock Text="{Binding CodexEntriesCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
+            </StackPanel>
+          </Border>
+          <Border Classes="stat-card" Grid.Column="4">
+            <StackPanel Spacing="10">
+              <TextBlock Classes="section-label" Text="{Binding ObservationsLabel}" />
+              <TextBlock Text="{Binding ObservationsCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
             </StackPanel>
           </Border>
         </Grid>

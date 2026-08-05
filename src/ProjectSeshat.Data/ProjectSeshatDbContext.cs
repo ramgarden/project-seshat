@@ -18,6 +18,12 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<JournalImportTracker> JournalImportTrackers => Set<JournalImportTracker>();
 
+    public DbSet<CelestialBody> CelestialBodies => Set<CelestialBody>();
+
+    public DbSet<CodexEntry> CodexEntries => Set<CodexEntry>();
+
+    public DbSet<Observation> Observations => Set<Observation>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StarSystem>(entity =>
@@ -55,6 +61,48 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.FilePath).IsRequired();
             entity.HasIndex(x => x.FilePath).IsUnique();
             entity.Property(x => x.Fingerprint).IsRequired();
+        });
+
+        modelBuilder.Entity<CelestialBody>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new CelestialBodyId(value));
+            entity.Property(x => x.SystemId).HasConversion(
+                id => id.Value,
+                value => new StarSystemId(value));
+            entity.HasIndex(x => x.SystemId);
+            entity.Property(x => x.Name).IsRequired();
+            entity.Property(x => x.Kind).HasConversion<string>();
+        });
+
+        modelBuilder.Entity<CodexEntry>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new CodexEntryId(value));
+            entity.Property(x => x.Name).IsRequired();
+            entity.Property(x => x.Category).HasConversion<string>();
+            entity.Property(x => x.DiscoveredAt).IsRequired();
+        });
+
+        modelBuilder.Entity<Observation>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new ObservationGuid(value));
+            entity.Property(x => x.BodyId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new CelestialBodyId(value.Value) : (CelestialBodyId?)null);
+            entity.Property(x => x.CommanderId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new CommanderId(value.Value) : (CommanderId?)null);
+            entity.HasIndex(x => x.BodyId);
+            entity.Property(x => x.Notes).IsRequired();
+            entity.Property(x => x.ObservedAt).IsRequired();
         });
     }
 }

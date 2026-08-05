@@ -8,3 +8,12 @@ public readonly record struct CommanderId(Guid Value);
 
 /// <summary>Identifies a recorded item of research evidence.</summary>
 public readonly record struct EvidenceId(Guid Value);
+
+/// <summary>Identifies a celestial body catalogued in the atlas.</summary>
+public readonly record struct CelestialBodyId(Guid Value);
+
+/// <summary>Identifies an entry in the discovery codex.</summary>
+public readonly record struct CodexEntryId(Guid Value);
+
+/// <summary>Identifies an observation recorded in the observatory.</summary>
+public readonly record struct ObservationGuid(Guid Value);

@@ -25,9 +25,12 @@
 
 - [x] Establish navigation and feature composition in the desktop app.
 
+## Milestone 0.7 — Atlas, codex, and observation data
+
+- [x] Model atlas, codex, and observation data.
+
 ## Next
 
-- [ ] Model atlas, codex, and observation data.
 - [ ] Build research-thread workflows.
 - [ ] Support evidence capture and investigations.
 

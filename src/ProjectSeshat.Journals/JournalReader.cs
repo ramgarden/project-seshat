@@ -14,7 +14,9 @@ public sealed class JournalReader
         IEvidenceRepository evidenceRepository,
         IJournalImportTrackerRepository? importTrackerRepository = null,
         string? filePath = null,
-        CancellationToken cancellationToken = default)
+        CancellationToken cancellationToken = default,
+        ICelestialBodyRepository? celestialBodyRepository = null,
+        ICodexEntryRepository? codexEntryRepository = null)
     {
         if (importTrackerRepository is not null && !string.IsNullOrWhiteSpace(filePath))
         {
@@ -42,7 +44,14 @@ public sealed class JournalReader
             }
 
             fingerprintBuilder.AppendLine(line);
-            await ImportLineAsync(line, starSystemRepository, commanderRepository, evidenceRepository, cancellationToken);
+            await ImportLineAsync(
+                line,
+                starSystemRepository,
+                commanderRepository,
+                evidenceRepository,
+                celestialBodyRepository,
+                codexEntryRepository,
+                cancellationToken);
         }
 
         if (importTrackerRepository is not null && !string.IsNullOrWhiteSpace(filePath))
@@ -102,6 +111,8 @@ public sealed class JournalReader
         IStarSystemRepository starSystemRepository,
         ICommanderRepository commanderRepository,
         IEvidenceRepository evidenceRepository,
+        ICelestialBodyRepository? celestialBodyRepository,
+        ICodexEntryRepository? codexEntryRepository,
         CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(line);
@@ -110,81 +121,208 @@ public sealed class JournalReader
             return;
         }
 
-        if (payload.TryGetValue("event", out var eventName))
+        if (!payload.TryGetValue("event", out var eventName))
         {
-            var eventType = eventName.GetString();
+            return;
+        }
 
-            if (eventType == "LoadGame" && payload.TryGetValue("Commander", out var commanderName))
+        var eventType = eventName.GetString();
+
+        if (eventType == "LoadGame" && payload.TryGetValue("Commander", out var commanderName))
+        {
+            var commanderNameValue = commanderName.GetString() ?? "Unknown Commander";
+            var exists = await commanderRepository.ExistsByNameAsync(commanderNameValue, cancellationToken);
+            if (exists)
             {
-                var commanderNameValue = commanderName.GetString() ?? "Unknown Commander";
-                var exists = await commanderRepository.ExistsByNameAsync(commanderNameValue, cancellationToken);
-                if (exists)
-                {
-                    return;
-                }
-
-                var commanderId = new CommanderId(Guid.NewGuid());
-                var commander = new Commander(commanderId, commanderNameValue);
-                await commanderRepository.SaveAsync(commander, cancellationToken);
                 return;
             }
 
-            if (eventType == "FSDJump" && payload.TryGetValue("StarSystem", out var systemName))
-            {
-                var systemNameValue = systemName.GetString() ?? "Unknown System";
-                var exists = await starSystemRepository.ExistsByNameAsync(systemNameValue, cancellationToken);
-                if (exists)
-                {
-                    return;
-                }
+            var commanderId = new CommanderId(Guid.NewGuid());
+            var commander = new Commander(commanderId, commanderNameValue);
+            await commanderRepository.SaveAsync(commander, cancellationToken);
+            return;
+        }
 
-                var systemId = new StarSystemId(Math.Abs(systemNameValue.GetHashCode()));
-                var system = new StarSystem(systemId, systemNameValue);
-                await starSystemRepository.SaveAsync(system, cancellationToken);
+        if (eventType == "FSDJump" && payload.TryGetValue("StarSystem", out var systemName))
+        {
+            var systemNameValue = systemName.GetString() ?? "Unknown System";
+            var exists = await starSystemRepository.ExistsByNameAsync(systemNameValue, cancellationToken);
+            if (exists)
+            {
                 return;
             }
 
-            if ((eventType == "Scan" || eventType == "SAASignalsFound" || eventType == "ApproachBody" || eventType == "Location") && payload.TryGetValue("BodyName", out var bodyName))
+            var systemId = new StarSystemId(Math.Abs(systemNameValue.GetHashCode()));
+            var system = new StarSystem(systemId, systemNameValue);
+            await starSystemRepository.SaveAsync(system, cancellationToken);
+            return;
+        }
+
+        if (eventType == "Scan" && payload.TryGetValue("BodyName", out var scanBodyName))
+        {
+            var bodyNameValue = scanBodyName.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(bodyNameValue))
             {
-                var summary = eventType switch
-                {
-                    "Scan" => $"Scanned {bodyName.GetString()}",
-                    "SAASignalsFound" => $"Detected signal near {bodyName.GetString()}",
-                    "ApproachBody" => $"Approached body {bodyName.GetString()}",
-                    _ => $"Observed {bodyName.GetString()}"
-                };
+                return;
+            }
 
-                var exists = await evidenceRepository.ExistsBySummaryAsync(summary, cancellationToken);
-                if (exists)
-                {
-                    return;
-                }
-
+            // Persist basic evidence for the scan (existing behaviour)
+            var evidenceSummary = $"Scanned {bodyNameValue}";
+            var evidenceExists = await evidenceRepository.ExistsBySummaryAsync(evidenceSummary, cancellationToken);
+            if (!evidenceExists)
+            {
                 var evidence = new EvidenceRecord(
                     new EvidenceId(Guid.NewGuid()),
                     EvidenceKind.Observation,
-                    summary,
+                    evidenceSummary,
                     DateTimeOffset.UtcNow);
                 await evidenceRepository.SaveAsync(evidence, cancellationToken);
+            }
+
+            // Persist celestial body into the atlas when repository is available
+            if (celestialBodyRepository is not null)
+            {
+                var bodyExists = await celestialBodyRepository.ExistsByNameAsync(bodyNameValue, cancellationToken);
+                if (!bodyExists)
+                {
+                    var kind = DetermineBodyKind(payload);
+                    var starClass = payload.TryGetValue("StarType", out var st) ? st.GetString() : null;
+                    var planetClass = payload.TryGetValue("PlanetClass", out var pc) ? pc.GetString() : null;
+                    bool? isTerraformable = payload.TryGetValue("TerraformState", out var tf)
+                        ? tf.GetString() == "Terraformable"
+                        : null;
+                    double? distanceLs = payload.TryGetValue("DistanceFromArrivalLS", out var dist)
+                        ? dist.TryGetDouble(out var d) ? d : null
+                        : null;
+
+                    // Derive system ID from the system name embedded in the body name (best effort)
+                    var systemId = DeriveSystemIdFromBodyName(bodyNameValue);
+
+                    var body = new CelestialBody(
+                        new CelestialBodyId(Guid.NewGuid()),
+                        systemId,
+                        bodyNameValue,
+                        kind,
+                        starClass,
+                        planetClass,
+                        isTerraformable,
+                        distanceLs);
+                    await celestialBodyRepository.SaveAsync(body, cancellationToken);
+                }
+            }
+
+            return;
+        }
+
+        if (eventType == "CodexEntry" && payload.TryGetValue("Name_Localised", out var codexName) && codexEntryRepository is not null)
+        {
+            var nameValue = codexName.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(nameValue))
+            {
                 return;
             }
 
-            if (eventType == "Location" && payload.TryGetValue("StarSystem", out var locationSystem))
+            var alreadyExists = await codexEntryRepository.ExistsByNameAsync(nameValue, cancellationToken);
+            if (!alreadyExists)
             {
-                var summary = $"Visited {locationSystem.GetString()}";
-                var exists = await evidenceRepository.ExistsBySummaryAsync(summary, cancellationToken);
-                if (exists)
-                {
-                    return;
-                }
+                var categoryValue = payload.TryGetValue("Category_Localised", out var cat)
+                    ? ParseCodexCategory(cat.GetString())
+                    : CodexCategory.Other;
 
-                var evidence = new EvidenceRecord(
-                    new EvidenceId(Guid.NewGuid()),
-                    EvidenceKind.Observation,
-                    summary,
+                var entry = new CodexEntry(
+                    new CodexEntryId(Guid.NewGuid()),
+                    nameValue,
+                    categoryValue,
+                    null,
                     DateTimeOffset.UtcNow);
-                await evidenceRepository.SaveAsync(evidence, cancellationToken);
+                await codexEntryRepository.SaveAsync(entry, cancellationToken);
             }
+
+            return;
+        }
+
+        if ((eventType == "SAASignalsFound" || eventType == "ApproachBody" || eventType == "Location") &&
+            payload.TryGetValue("BodyName", out var bodyName))
+        {
+            var summary = eventType switch
+            {
+                "SAASignalsFound" => $"Detected signal near {bodyName.GetString()}",
+                "ApproachBody" => $"Approached body {bodyName.GetString()}",
+                _ => $"Observed {bodyName.GetString()}"
+            };
+
+            var exists = await evidenceRepository.ExistsBySummaryAsync(summary, cancellationToken);
+            if (exists)
+            {
+                return;
+            }
+
+            var evidence = new EvidenceRecord(
+                new EvidenceId(Guid.NewGuid()),
+                EvidenceKind.Observation,
+                summary,
+                DateTimeOffset.UtcNow);
+            await evidenceRepository.SaveAsync(evidence, cancellationToken);
+            return;
+        }
+
+        if (eventType == "Location" && payload.TryGetValue("StarSystem", out var locationSystem))
+        {
+            var summary = $"Visited {locationSystem.GetString()}";
+            var exists = await evidenceRepository.ExistsBySummaryAsync(summary, cancellationToken);
+            if (exists)
+            {
+                return;
+            }
+
+            var evidence = new EvidenceRecord(
+                new EvidenceId(Guid.NewGuid()),
+                EvidenceKind.Observation,
+                summary,
+                DateTimeOffset.UtcNow);
+            await evidenceRepository.SaveAsync(evidence, cancellationToken);
         }
     }
+
+    private static BodyKind DetermineBodyKind(Dictionary<string, JsonElement> payload)
+    {
+        if (payload.ContainsKey("StarType"))
+        {
+            return BodyKind.Star;
+        }
+
+        if (payload.TryGetValue("PlanetClass", out _))
+        {
+            return BodyKind.Planet;
+        }
+
+        if (payload.TryGetValue("BodyType", out var bt) && bt.GetString() == "Belt")
+        {
+            return BodyKind.AsteroidBelt;
+        }
+
+        return BodyKind.Unknown;
+    }
+
+    /// <summary>
+    /// Derives a <see cref="StarSystemId"/> from a body name by stripping the trailing body
+    /// designator (e.g. "Sol A" → "Sol"). Falls back to hashing the full body name.
+    /// </summary>
+    private static StarSystemId DeriveSystemIdFromBodyName(string bodyName)
+    {
+        // Common pattern: body name ends with " A", " B 1", " 3 a", etc.
+        // Strip trailing single-char/digit suffixes to recover the system name.
+        var parts = bodyName.Split(' ');
+        var systemName = parts.Length > 1 ? string.Join(' ', parts[..^1]) : bodyName;
+        return new StarSystemId(Math.Abs(systemName.GetHashCode()));
+    }
+
+    private static CodexCategory ParseCodexCategory(string? raw) => raw?.ToLowerInvariant() switch
+    {
+        "biology" or "biological" => CodexCategory.Biology,
+        "geology" or "geological" => CodexCategory.Geology,
+        "phenomena" => CodexCategory.Phenomena,
+        "astronomy" or "astronomical" => CodexCategory.Astronomy,
+        _ => CodexCategory.Other
+    };
 }

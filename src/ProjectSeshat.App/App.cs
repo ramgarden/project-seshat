@@ -38,6 +38,9 @@ public sealed class App : Application
         var commanderRepository = new CommanderRepository(context);
         var evidenceRepository = new EvidenceRepository(context);
         var importTrackerRepository = new JournalImportTrackerRepository(context);
+        var celestialBodyRepository = new CelestialBodyRepository(context);
+        var codexEntryRepository = new CodexEntryRepository(context);
+        var observationRepository = new ObservationRepository(context);
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
 
@@ -47,7 +50,10 @@ public sealed class App : Application
             evidenceRepository,
             pathResolver,
             journalReader,
-            importTrackerRepository);
+            importTrackerRepository,
+            celestialBodyRepository,
+            codexEntryRepository,
+            observationRepository);
     }
 
     public static MainWindow CreateMainWindow() => new(CreateViewModel());

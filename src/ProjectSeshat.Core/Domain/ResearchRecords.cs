@@ -23,3 +23,56 @@ public sealed record EvidenceRecord(
     EvidenceKind Kind,
     string Summary,
     DateTimeOffset RecordedAt);
+
+// ── Atlas ────────────────────────────────────────────────────────────────────
+
+/// <summary>Classifies the broad type of a celestial body.</summary>
+public enum BodyKind
+{
+    Star,
+    Planet,
+    Moon,
+    AsteroidBelt,
+    Unknown
+}
+
+/// <summary>Represents a celestial body catalogued from scanner data.</summary>
+public sealed record CelestialBody(
+    CelestialBodyId Id,
+    StarSystemId SystemId,
+    string Name,
+    BodyKind Kind,
+    string? StarClass,
+    string? PlanetClass,
+    bool? IsTerraformable,
+    double? DistanceFromArrivalLs);
+
+// ── Codex ────────────────────────────────────────────────────────────────────
+
+/// <summary>Groups a codex discovery by its broad research category.</summary>
+public enum CodexCategory
+{
+    Biology,
+    Geology,
+    Phenomena,
+    Astronomy,
+    Other
+}
+
+/// <summary>Represents a discovery entry in the exploration codex.</summary>
+public sealed record CodexEntry(
+    CodexEntryId Id,
+    string Name,
+    CodexCategory Category,
+    string? Description,
+    DateTimeOffset DiscoveredAt);
+
+// ── Observatory ───────────────────────────────────────────────────────────────
+
+/// <summary>Represents a timestamped observation linked to a body and commander.</summary>
+public sealed record ObservationRecord(
+    ObservationGuid Id,
+    CelestialBodyId? BodyId,
+    CommanderId? CommanderId,
+    string Notes,
+    DateTimeOffset ObservedAt);

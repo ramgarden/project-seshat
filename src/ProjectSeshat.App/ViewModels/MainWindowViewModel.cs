@@ -18,7 +18,10 @@ public sealed class MainWindowViewModel : ViewModelBase
         IEvidenceRepository evidenceRepository,
         JournalPathResolver? journalPathResolver = null,
         JournalReader? journalReader = null,
-        IJournalImportTrackerRepository? journalImportTrackerRepository = null)
+        IJournalImportTrackerRepository? journalImportTrackerRepository = null,
+        ICelestialBodyRepository? celestialBodyRepository = null,
+        ICodexEntryRepository? codexEntryRepository = null,
+        IObservationRepository? observationRepository = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -26,11 +29,15 @@ public sealed class MainWindowViewModel : ViewModelBase
             evidenceRepository,
             journalImportTrackerRepository,
             journalPathResolver,
-            journalReader);
+            journalReader,
+            celestialBodyRepository,
+            codexEntryRepository,
+            observationRepository);
 
         Exploration = new ExplorationViewModel(
             starSystemRepository,
-            evidenceRepository);
+            evidenceRepository,
+            celestialBodyRepository);
 
         // Coordinate data updates
         Dashboard.DataImported += (s, e) =>

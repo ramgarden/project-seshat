@@ -12,4 +12,6 @@ public interface IStarSystemRepository
     Task<int> CountAsync(CancellationToken cancellationToken = default);
 
     Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<StarSystem>> ListAsync(int maxCount, CancellationToken cancellationToken = default);
 }

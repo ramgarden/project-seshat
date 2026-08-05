@@ -36,4 +36,10 @@ public sealed class StarSystemRepository : IStarSystemRepository
 
     public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
         => await _context.StarSystems.AnyAsync(system => system.Name == name, cancellationToken);
+
+    public async Task<IReadOnlyList<StarSystem>> ListAsync(int maxCount, CancellationToken cancellationToken = default)
+        => await _context.StarSystems
+            .OrderBy(s => s.Name)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken);
 }
