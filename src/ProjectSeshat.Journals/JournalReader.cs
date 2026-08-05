@@ -16,12 +16,19 @@ public sealed class JournalReader
         string? filePath = null,
         CancellationToken cancellationToken = default,
         ICelestialBodyRepository? celestialBodyRepository = null,
-        ICodexEntryRepository? codexEntryRepository = null)
+        ICodexEntryRepository? codexEntryRepository = null,
+        string? contentFingerprint = null)
     {
-        if (importTrackerRepository is not null && !string.IsNullOrWhiteSpace(filePath))
+        if (importTrackerRepository is not null)
         {
-            var alreadyImported = await importTrackerRepository.HasImportedAsync(filePath, cancellationToken);
-            if (alreadyImported)
+            var alreadyImportedContent = !string.IsNullOrWhiteSpace(contentFingerprint)
+                && await importTrackerRepository.HasImportedByFingerprintAsync(contentFingerprint, cancellationToken);
+
+            var alreadyImportedPath = string.IsNullOrWhiteSpace(contentFingerprint)
+                && !string.IsNullOrWhiteSpace(filePath)
+                && await importTrackerRepository.HasImportedAsync(filePath, cancellationToken);
+
+            if (alreadyImportedContent || alreadyImportedPath)
             {
                 return;
             }
@@ -54,15 +61,30 @@ public sealed class JournalReader
                 cancellationToken);
         }
 
-        if (importTrackerRepository is not null && !string.IsNullOrWhiteSpace(filePath))
+        if (importTrackerRepository is not null)
         {
-            var fingerprint = fingerprintBuilder.ToString();
-            var existing = await importTrackerRepository.HasImportedAsync(filePath, cancellationToken);
-            if (!existing)
+            var fingerprint = string.IsNullOrWhiteSpace(contentFingerprint)
+                ? ComputeFingerprint(fingerprintBuilder.ToString())
+                : contentFingerprint;
+
+            var alreadyImported = !string.IsNullOrWhiteSpace(fingerprint)
+                && await importTrackerRepository.HasImportedByFingerprintAsync(fingerprint, cancellationToken);
+            if (!alreadyImported)
             {
-                await importTrackerRepository.MarkImportedAsync(filePath, fingerprint, cancellationToken);
+                await importTrackerRepository.MarkImportedAsync(filePath ?? "<content>", fingerprint ?? string.Empty, cancellationToken);
             }
         }
+    }
+
+    public static string ComputeFingerprint(string content)
+    {
+        if (string.IsNullOrEmpty(content))
+        {
+            return string.Empty;
+        }
+
+        var bytes = System.Security.Cryptography.SHA256.HashData(System.Text.Encoding.UTF8.GetBytes(content));
+        return Convert.ToHexString(bytes);
     }
 
     public async Task ImportDirectoryAsync(
@@ -206,7 +228,8 @@ public sealed class JournalReader
                         starClass,
                         planetClass,
                         isTerraformable,
-                        distanceLs);
+                        distanceLs,
+                        ScanStatus.FssScanned);
                     await celestialBodyRepository.SaveAsync(body, cancellationToken);
                 }
             }

@@ -17,3 +17,6 @@ public readonly record struct CodexEntryId(Guid Value);
 
 /// <summary>Identifies an observation recorded in the observatory.</summary>
 public readonly record struct ObservationGuid(Guid Value);
+
+/// <summary>Identifies a research thread in the ThreadEngine.</summary>
+public readonly record struct ResearchThreadId(Guid Value);

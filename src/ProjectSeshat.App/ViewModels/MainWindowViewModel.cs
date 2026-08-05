@@ -2,6 +2,7 @@ using System;
 using System.Windows.Input;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Journals;
+using ProjectSeshat.ThreadEngine;
 
 namespace ProjectSeshat.App.ViewModels;
 
@@ -11,6 +12,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private ViewModelBase _currentPage;
     private bool _isDashboardActive;
     private bool _isExplorationActive;
+    private bool _isThreadsActive;
 
     public MainWindowViewModel(
         IStarSystemRepository starSystemRepository,
@@ -21,7 +23,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         IJournalImportTrackerRepository? journalImportTrackerRepository = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
-        IObservationRepository? observationRepository = null)
+        IObservationRepository? observationRepository = null,
+        ResearchThreadEngine? researchThreadEngine = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -39,6 +42,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             evidenceRepository,
             celestialBodyRepository);
 
+        Threads = new ThreadsViewModel(researchThreadEngine);
+
         // Coordinate data updates
         Dashboard.DataImported += (s, e) =>
         {
@@ -47,6 +52,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         NavigateToDashboardCommand = new RelayCommand(() => CurrentPage = Dashboard);
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
+        NavigateToThreadsCommand = new RelayCommand(() => CurrentPage = Threads);
 
         // Start on Dashboard
         _currentPage = Dashboard;
@@ -62,6 +68,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public DashboardViewModel Dashboard { get; }
 
     public ExplorationViewModel Exploration { get; }
+
+    public ThreadsViewModel Threads { get; }
 
     public ViewModelBase CurrentPage
     {
@@ -87,14 +95,23 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isExplorationActive, value);
     }
 
+    public bool IsThreadsActive
+    {
+        get => _isThreadsActive;
+        private set => SetProperty(ref _isThreadsActive, value);
+    }
+
     public ICommand NavigateToDashboardCommand { get; }
 
     public ICommand NavigateToExplorationCommand { get; }
+
+    public ICommand NavigateToThreadsCommand { get; }
 
     private void UpdateActiveStates()
     {
         IsDashboardActive = CurrentPage == Dashboard;
         IsExplorationActive = CurrentPage == Exploration;
+        IsThreadsActive = CurrentPage == Threads;
     }
 
     private sealed class RelayCommand(Action execute) : ICommand

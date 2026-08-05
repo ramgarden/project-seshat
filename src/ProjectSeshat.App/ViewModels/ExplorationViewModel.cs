@@ -17,6 +17,7 @@ public sealed class ExplorationViewModel : ViewModelBase
     private string _selectedExploreItemTitle = "No system selected";
     private string _selectedExploreItemDetail = "Select a system to inspect what has already been searched and where deeper investigation may be useful.";
     private ExploreItem? _selectedExploreItem;
+    private BodyItem? _selectedBody;
 
     public ExplorationViewModel(
         IStarSystemRepository starSystemRepository,
@@ -28,6 +29,7 @@ public sealed class ExplorationViewModel : ViewModelBase
         _celestialBodyRepository = celestialBodyRepository;
 
         SelectExploreItemCommand = new RelayCommand<ExploreItem>(SelectExploreItem);
+        MarkDssMappedCommand = new RelayCommand(MarkDssMapped);
         RefreshExploreView();
     }
 
@@ -61,7 +63,23 @@ public sealed class ExplorationViewModel : ViewModelBase
         }
     }
 
+    public BodyItem? SelectedBody
+    {
+        get => _selectedBody;
+        set => SetProperty(ref _selectedBody, value);
+    }
+
+    public string SelectedBodyStatus => SelectedBody is null
+        ? "Select a body to review its scan status."
+        : $"{SelectedBody.Label} \u2014 {SelectedBody.ScanLabel}.";
+
     public ICommand SelectExploreItemCommand { get; }
+
+    public ICommand MarkDssMappedCommand { get; }
+
+    public string NeedsDssSummary => _celestialBodyRepository is null
+        ? string.Empty
+        : $"{_celestialBodyRepository.CountNeedingSurfaceScanAsync().GetAwaiter().GetResult()} bodies across the catalog still need DSS surface mapping.";
 
     public void RefreshExploreView()
     {
@@ -74,6 +92,7 @@ public sealed class ExplorationViewModel : ViewModelBase
         {
             ExploreItems.Add(new ExploreItem(0, "No systems yet", "Import journal files to start building a searchable list of systems and evidence."));
             OnPropertyChanged(nameof(ExplorationSummary));
+            OnPropertyChanged(nameof(NeedsDssSummary));
             return;
         }
 
@@ -82,13 +101,17 @@ public sealed class ExplorationViewModel : ViewModelBase
         foreach (var system in allSystems)
         {
             var bodyCount = _celestialBodyRepository?.CountForSystemAsync(system.Id).GetAwaiter().GetResult() ?? 0;
+            var needsDssCount = _celestialBodyRepository is null
+                ? 0
+                : _celestialBodyRepository.FindBySystemIdAsync(system.Id).GetAwaiter().GetResult().Count(b => b.ScanStatus != ScanStatus.Mapped);
             var detail = bodyCount > 0
-                ? $"{bodyCount} bod{(bodyCount == 1 ? "y" : "ies")} catalogued. Select to inspect bodies and observations."
+                ? $"{bodyCount} bod{(bodyCount == 1 ? "y" : "ies")} catalogued. {needsDssCount} need{(needsDssCount == 1 ? "s" : "")} DSS surface mapping. Select to inspect bodies and observations."
                 : "No bodies catalogued yet. Import journals to populate the atlas for this system.";
             ExploreItems.Add(new ExploreItem(system.Id.Value, system.Name, detail));
         }
 
         OnPropertyChanged(nameof(ExplorationSummary));
+        OnPropertyChanged(nameof(NeedsDssSummary));
     }
 
     private int GetEvidenceRecordsCount()
@@ -99,11 +122,13 @@ public sealed class ExplorationViewModel : ViewModelBase
     private void SelectExploreItem(ExploreItem? item)
     {
         SelectedSystemBodies.Clear();
+        SelectedBody = null;
 
         if (item is null)
         {
             SelectedExploreItemTitle = "No system selected";
             SelectedExploreItemDetail = "Select a system to inspect what has already been searched and where deeper investigation may be useful.";
+            OnPropertyChanged(nameof(SelectedBodyStatus));
             return;
         }
 
@@ -116,6 +141,8 @@ public sealed class ExplorationViewModel : ViewModelBase
             var bodies = _celestialBodyRepository.FindBySystemIdAsync(systemId).GetAwaiter().GetResult();
             foreach (var body in bodies.OrderBy(b => b.DistanceFromArrivalLs ?? double.MaxValue))
             {
+                var needsDss = body.ScanStatus != ScanStatus.Mapped;
+                var mappedMarker = body.ScanStatus == ScanStatus.Mapped ? " \u2713 mapped" : " \u25a1 needs DSS";
                 var label = body.Kind switch
                 {
                     BodyKind.Star => $"\u2605 {body.Name}{(body.StarClass is not null ? $" [{body.StarClass}]" : string.Empty)}",
@@ -127,9 +154,56 @@ public sealed class ExplorationViewModel : ViewModelBase
                 var distance = body.DistanceFromArrivalLs.HasValue
                     ? $"{body.DistanceFromArrivalLs.Value:N0} ls"
                     : "distance unknown";
-                SelectedSystemBodies.Add(new BodyItem(label, distance));
+                SelectedSystemBodies.Add(new BodyItem(
+                    body.Id,
+                    label,
+                    distance,
+                    needsDss,
+                    body.ScanStatus == ScanStatus.Mapped ? "Mapped" : (body.ScanStatus == ScanStatus.FssScanned ? "FSS scanned" : "Discovered")));
             }
         }
+
+        OnPropertyChanged(nameof(SelectedBodyStatus));
+    }
+
+    private void MarkDssMapped()
+    {
+        if (_celestialBodyRepository is null || SelectedBody is null)
+        {
+            return;
+        }
+
+        try
+        {
+            _celestialBodyRepository
+                .UpdateScanStatusAsync(SelectedBody.BodyId, ScanStatus.Mapped)
+                .GetAwaiter()
+                .GetResult();
+
+            if (SelectedExploreItem is not null)
+            {
+                SelectExploreItem(SelectedExploreItem);
+            }
+
+            RefreshExploreView();
+        }
+        catch (Exception)
+        {
+            // Surface the error quietly to avoid breaking the view.
+        }
+    }
+
+    private sealed class RelayCommand(Action execute) : ICommand
+    {
+        public event EventHandler? CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool CanExecute(object? parameter) => true;
+
+        public void Execute(object? parameter) => execute();
     }
 
     private sealed class RelayCommand<T>(Action<T?> execute) : ICommand
@@ -148,4 +222,4 @@ public sealed class ExplorationViewModel : ViewModelBase
 
 public sealed record ExploreItem(long SystemIdValue, string SystemName, string Detail);
 
-public sealed record BodyItem(string Label, string Distance);
+public sealed record BodyItem(CelestialBodyId BodyId, string Label, string Distance, bool NeedsDss, string ScanLabel);

@@ -36,6 +36,19 @@ public enum BodyKind
     Unknown
 }
 
+/// <summary>Classifies the depth of scanning a celestial body has received.</summary>
+public enum ScanStatus
+{
+    /// <summary>Detected (FSS honk/point) but not otherwise characterized.</summary>
+    Discovered,
+
+    /// <summary>Full Spectrum Scanner spectral details captured.</summary>
+    FssScanned,
+
+    /// <summary>Detailed Surface Scanner mapping complete.</summary>
+    Mapped
+}
+
 /// <summary>Represents a celestial body catalogued from scanner data.</summary>
 public sealed record CelestialBody(
     CelestialBodyId Id,
@@ -45,7 +58,8 @@ public sealed record CelestialBody(
     string? StarClass,
     string? PlanetClass,
     bool? IsTerraformable,
-    double? DistanceFromArrivalLs);
+    double? DistanceFromArrivalLs,
+    ScanStatus ScanStatus = ScanStatus.Discovered);
 
 // ── Codex ────────────────────────────────────────────────────────────────────
 

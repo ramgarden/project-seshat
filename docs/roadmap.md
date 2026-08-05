@@ -29,10 +29,17 @@
 
 - [x] Model atlas, codex, and observation data.
 
+## Milestone 0.8 — Research-thread workflows
+
+- [x] Build research-thread workflows.
+- [x] Track scan completeness (FSS/DSS) per celestial body and surface it in exploration.
+- [x] Persist the database at a stable location (user AppData) so data survives relaunch.
+- [x] De-duplicate journal imports by content fingerprint (SHA-256), not just file path.
+
 ## Next
 
-- [ ] Build research-thread workflows.
 - [ ] Support evidence capture and investigations.
+- [ ] Identify undiscovered regions via the Atlas boundary.
 
 ## Quality
 

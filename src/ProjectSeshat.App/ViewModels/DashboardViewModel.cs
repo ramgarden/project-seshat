@@ -193,8 +193,9 @@ public sealed class DashboardViewModel : ViewModelBase
 
                 try
                 {
-                    await using var stream = File.OpenRead(file);
-                    using var reader = new StreamReader(stream);
+                    var content = File.ReadAllText(file);
+                    var contentFingerprint = JournalReader.ComputeFingerprint(content);
+                    using var reader = new StringReader(content);
                     using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
                     await _journalReader.ImportAsync(
                         reader,
@@ -205,7 +206,8 @@ public sealed class DashboardViewModel : ViewModelBase
                         file,
                         timeoutCts.Token,
                         _celestialBodyRepository,
-                        _codexEntryRepository);
+                        _codexEntryRepository,
+                        contentFingerprint);
                 }
                 catch (OperationCanceledException)
                 {

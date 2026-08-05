@@ -76,10 +76,19 @@
               <TextBlock Text="Exploration" VerticalAlignment="Center" />
             </StackPanel>
           </Button>
+
+          <Button Classes="nav-btn"
+                  Classes.active="{Binding IsThreadsActive}"
+                  Command="{Binding NavigateToThreadsCommand}">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="M11 15h2v-2h-2v2zm0-6h2V5h-2v4zm1 13c-5.52 0-10-4.48-10-10S6.48 2 12 2s10 4.48 10 10-4.48 10-10 10zm0-18c-4.41 0-8 3.59-8 8s3.59 8 8 8 8-3.59 8-8-3.59-8-8-8z" Width="16" Height="16" />
+              <TextBlock Text="Research Threads" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
         </StackPanel>
 
         <!-- Footer -->
-        <TextBlock Grid.Row="2" Text="v0.6.0-alpha" Foreground="#47738C" FontSize="11" HorizontalAlignment="Center" />
+        <TextBlock Grid.Row="2" Text="v0.7.0-alpha" Foreground="#47738C" FontSize="11" HorizontalAlignment="Center" />
       </Grid>
     </Border>
 

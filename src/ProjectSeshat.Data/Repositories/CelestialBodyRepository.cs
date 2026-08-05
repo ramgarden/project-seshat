@@ -45,4 +45,30 @@ public sealed class CelestialBodyRepository : ICelestialBodyRepository
 
     public async Task<int> CountForSystemAsync(StarSystemId systemId, CancellationToken cancellationToken = default)
         => await _context.CelestialBodies.CountAsync(b => b.SystemId == systemId, cancellationToken);
+
+    public Task<int> CountNeedingSurfaceScanAsync(CancellationToken cancellationToken = default)
+        => _context.CelestialBodies.CountAsync(b => b.ScanStatus != ScanStatus.Mapped, cancellationToken);
+
+    public async Task<IReadOnlyList<CelestialBody>> ListNeedingSurfaceScanAsync(int maxCount, CancellationToken cancellationToken = default)
+    {
+        var results = await _context.CelestialBodies
+            .Where(b => b.ScanStatus != ScanStatus.Mapped)
+            .OrderBy(b => b.Name)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken);
+        return results.OrderBy(b => b.DistanceFromArrivalLs ?? double.MaxValue).ToList();
+    }
+
+    public async ValueTask UpdateScanStatusAsync(CelestialBodyId id, ScanStatus status, CancellationToken cancellationToken = default)
+    {
+        var body = await _context.CelestialBodies.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);
+        if (body is null)
+        {
+            return;
+        }
+
+        _context.Entry(body).State = EntityState.Detached;
+        _context.CelestialBodies.Update(body with { ScanStatus = status });
+        await _context.SaveChangesAsync(cancellationToken);
+    }
 }

@@ -11,5 +11,6 @@
     <ProjectReference Include="..\..\src\ProjectSeshat.Core\ProjectSeshat.Core.csproj" />
     <ProjectReference Include="..\..\src\ProjectSeshat.Data\ProjectSeshat.Data.csproj" />
     <ProjectReference Include="..\..\src\ProjectSeshat.Journals\ProjectSeshat.Journals.csproj" />
+    <ProjectReference Include="..\..\src\ProjectSeshat.ThreadEngine\ProjectSeshat.ThreadEngine.csproj" />
   </ItemGroup>
 </Project>

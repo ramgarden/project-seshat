@@ -59,7 +59,28 @@
             <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
             <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
             <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <TextBlock Text="Use this view to understand what has already been searched and where deeper investigation may be useful." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            <TextBlock Text="{Binding SelectedBodyStatus}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
+            <ListBox ItemsSource="{Binding SelectedSystemBodies}"
+                     SelectedItem="{Binding SelectedBody, Mode=TwoWay}"
+                     MaxHeight="220"
+                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                     ScrollViewer.VerticalScrollBarVisibility="Auto">
+              <ListBox.ItemTemplate>
+                <DataTemplate>
+                  <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4">
+                    <TextBlock Text="{Binding Label}" Foreground="#E5F5FF" FontSize="13" TextWrapping="Wrap" />
+                    <TextBlock Text="{Binding Distance}" Foreground="#83B8D5" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ScanLabel}" Foreground="#36C5F0" FontSize="12" VerticalAlignment="Center" />
+                  </StackPanel>
+                </DataTemplate>
+              </ListBox.ItemTemplate>
+            </ListBox>
+            <Button Classes="action" HorizontalAlignment="Left" Command="{Binding MarkDssMappedCommand}">
+              <TextBlock Text="Mark DSS Mapped" />
+            </Button>
+            <TextBlock Text="{Binding NeedsDssSummary}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            <Border Height="1" Background="#1A4D67" Margin="0,8" />
+            <TextBlock Text="Bodies marked as needing DSS are surface-scan candidates. Mark one as mapped once you have run the Detailed Surface Scanner." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </StackPanel>

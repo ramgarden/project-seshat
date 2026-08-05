@@ -19,6 +19,9 @@ public sealed class JournalImportTrackerRepository : IJournalImportTrackerReposi
         return await _context.JournalImportTrackers.AnyAsync(tracker => tracker.FilePath == normalizedPath, cancellationToken);
     }
 
+    public Task<bool> HasImportedByFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default)
+        => _context.JournalImportTrackers.AnyAsync(tracker => tracker.Fingerprint == fingerprint, cancellationToken);
+
     public async Task MarkImportedAsync(string filePath, string fingerprint, CancellationToken cancellationToken = default)
     {
         var normalizedPath = Normalize(filePath);

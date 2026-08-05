@@ -16,4 +16,10 @@ public interface ICelestialBodyRepository
     Task<IReadOnlyList<CelestialBody>> FindBySystemIdAsync(StarSystemId systemId, CancellationToken cancellationToken = default);
 
     Task<int> CountForSystemAsync(StarSystemId systemId, CancellationToken cancellationToken = default);
+
+    Task<int> CountNeedingSurfaceScanAsync(CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<CelestialBody>> ListNeedingSurfaceScanAsync(int maxCount, CancellationToken cancellationToken = default);
+
+    ValueTask UpdateScanStatusAsync(CelestialBodyId id, ScanStatus status, CancellationToken cancellationToken = default);
 }

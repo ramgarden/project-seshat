@@ -1,0 +1,129 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.ThreadsView"
+             x:DataType="vm:ThreadsViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="Foreground" Value="#7DAAC4" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="ListBox">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="Padding" Value="0" />
+    </Style>
+    <Style Selector="ListBoxItem">
+      <Setter Property="Padding" Value="0,0,0,8" />
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
+      <Setter Property="Background" Value="Transparent" />
+    </Style>
+    <Style Selector="TextBox.entry">
+      <Setter Property="Background" Value="#08111D" />
+      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="BorderBrush" Value="#1A4D67" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="10,8" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.action:pointerover">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#83B8D5" />
+      <Setter Property="BorderBrush" Value="#1A4D67" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="14,8" />
+      <Setter Property="Margin" Value="0,0,8,0" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover">
+      <Setter Property="Foreground" Value="#E5F5FF" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24">
+    <Grid RowDefinitions="Auto,Auto,*" ColumnDefinitions="340,*">
+      <StackPanel Grid.Row="0" Grid.Column="0" Spacing="12" Margin="0,0,0,16">
+        <TextBlock Classes="section-label" Text="RESEARCH THREADS" />
+        <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <!-- New thread form -->
+      <Border Grid.Row="1" Grid.Column="0" Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="16" Margin="0,0,16,16">
+        <StackPanel Spacing="12">
+          <TextBlock Classes="section-label" Text="NEW THREAD" />
+          <TextBox Classes="entry" Watermark="Research subject (e.g. body, system, phenomenon)"
+                   Text="{Binding NewThreadSubject}" />
+          <TextBox Classes="entry" Watermark="Opening notes (optional)"
+                   Text="{Binding NewThreadNotes}" AcceptsReturn="True" MinHeight="60" />
+          <Button Classes="action" HorizontalAlignment="Left" Command="{Binding CreateThreadCommand}">
+            <TextBlock Text="Create Thread" />
+          </Button>
+        </StackPanel>
+      </Border>
+
+      <!-- Thread list -->
+      <ListBox Grid.Row="2" Grid.Column="0" Margin="0,8,16,0"
+               ItemsSource="{Binding Threads}"
+               SelectedItem="{Binding SelectedThread, Mode=TwoWay}"
+               SelectionMode="Single"
+               ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+               ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <ListBox.ItemTemplate>
+          <DataTemplate>
+            <Border Padding="12" Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4">
+              <StackPanel Spacing="6">
+                <StackPanel Orientation="Horizontal" Spacing="10">
+                  <TextBlock Text="{Binding Subject}" Foreground="#E5F5FF" FontWeight="SemiBold" FontSize="14" />
+                  <TextBlock Text="{Binding StatusLabel}" Foreground="#36C5F0" FontSize="12" VerticalAlignment="Center" />
+                </StackPanel>
+                <TextBlock Text="{Binding DisplayNotes}" Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" MaxLines="2" />
+              </StackPanel>
+            </Border>
+          </DataTemplate>
+        </ListBox.ItemTemplate>
+      </ListBox>
+
+      <!-- Detail + actions -->
+      <StackPanel Grid.Row="0" Grid.RowSpan="3" Grid.Column="1" Spacing="16" Margin="24,0,0,0">
+        <TextBlock Classes="section-label" Text="FOCUS" />
+        <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+          <StackPanel Spacing="16">
+            <TextBlock Text="{Binding SelectedThreadTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
+            <TextBlock Text="{Binding SelectedThreadDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
+            <Border Height="1" Background="#1A4D67" Margin="0,8" />
+            <StackPanel Orientation="Horizontal">
+              <Button Classes="ghost" Command="{Binding AdvanceCommand}">
+                <TextBlock Text="Advance Stage" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding ConcludeCommand}">
+                <TextBlock Text="Conclude" />
+              </Button>
+              <Button Classes="ghost" Command="{Binding ReopenCommand}">
+                <TextBlock Text="Reopen" />
+              </Button>
+            </StackPanel>
+            <TextBlock Text="Move a thread from Open through Investigating to Concluded (then Archived). Reopen returns a closed thread to Open." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+          </StackPanel>
+        </Border>
+      </StackPanel>
+    </Grid>
+  </Border>
+</UserControl>

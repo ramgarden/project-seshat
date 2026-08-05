@@ -24,6 +24,8 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<Observation> Observations => Set<Observation>();
 
+    public DbSet<ResearchThread> ResearchThreads => Set<ResearchThread>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StarSystem>(entity =>
@@ -75,6 +77,7 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.HasIndex(x => x.SystemId);
             entity.Property(x => x.Name).IsRequired();
             entity.Property(x => x.Kind).HasConversion<string>();
+            entity.Property(x => x.ScanStatus).HasConversion<string>();
         });
 
         modelBuilder.Entity<CodexEntry>(entity =>
@@ -103,6 +106,23 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.HasIndex(x => x.BodyId);
             entity.Property(x => x.Notes).IsRequired();
             entity.Property(x => x.ObservedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<ResearchThread>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new ResearchThreadId(value));
+            entity.Property(x => x.Subject).IsRequired();
+            entity.Property(x => x.SystemId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (long?)null,
+                value => value.HasValue ? new StarSystemId(value.Value) : (StarSystemId?)null);
+            entity.Property(x => x.BodyId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (Guid?)null,
+                value => value.HasValue ? new CelestialBodyId(value.Value) : (CelestialBodyId?)null);
+            entity.Property(x => x.Status).HasConversion<string>();
+            entity.Property(x => x.CreatedAt).IsRequired();
         });
     }
 }

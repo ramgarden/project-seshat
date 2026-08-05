@@ -6,13 +6,12 @@ using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Data;
 using ProjectSeshat.Data.Repositories;
 using ProjectSeshat.Journals;
+using ProjectSeshat.ThreadEngine;
 
 namespace ProjectSeshat.App;
 
 public sealed class App : Application
 {
-    private const string DatabasePath = "project-seshat.db";
-
     public override void Initialize() => AvaloniaXamlLoader.Load(this);
 
     public override void OnFrameworkInitializationCompleted()
@@ -25,10 +24,19 @@ public sealed class App : Application
         base.OnFrameworkInitializationCompleted();
     }
 
+    public static string ResolveDatabasePath()
+    {
+        var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
+        var dataDirectory = Path.Combine(appData, "ProjectSeshat");
+        Directory.CreateDirectory(dataDirectory);
+        return Path.Combine(dataDirectory, "project-seshat.db");
+    }
+
     public static MainWindowViewModel CreateViewModel()
     {
+        var databasePath = ResolveDatabasePath();
         var options = new DbContextOptionsBuilder<ProjectSeshatDbContext>()
-            .UseSqlite($"Data Source={DatabasePath}")
+            .UseSqlite($"Data Source={databasePath}")
             .Options;
 
         var context = new ProjectSeshatDbContext(options);
@@ -41,6 +49,8 @@ public sealed class App : Application
         var celestialBodyRepository = new CelestialBodyRepository(context);
         var codexEntryRepository = new CodexEntryRepository(context);
         var observationRepository = new ObservationRepository(context);
+        var researchThreadRepository = new ResearchThreadRepository(context);
+        var researchThreadEngine = new ResearchThreadEngine(researchThreadRepository);
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
 
@@ -53,7 +63,8 @@ public sealed class App : Application
             importTrackerRepository,
             celestialBodyRepository,
             codexEntryRepository,
-            observationRepository);
+            observationRepository,
+            researchThreadEngine);
     }
 
     public static MainWindow CreateMainWindow() => new(CreateViewModel());
