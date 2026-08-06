@@ -135,7 +135,7 @@ public sealed class JournalReaderTests
         using var journal = new StringReader("""
 {"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447","StarPos":[-23.4,-72.4,-35.3]}
 {"timestamp":"2024-01-01T00:00:02Z","event":"FSSDiscoveryScan","StarSystem":"LHS 3447","BodyCount":5,"NonBodyCount":2}
-{"timestamp":"2024-01-01T00:00:03Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","DistanceFromArrivalLS":1200}
+{"timestamp":"2024-01-01T00:00:03Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","DistanceFromArrivalLS":1200,"ScanType":"FSS"}
 """);
 
         await reader.ImportAsync(
@@ -177,6 +177,105 @@ public sealed class JournalReaderTests
         Assert.NotNull(system);
         Assert.Equal(SystemSurveyState.Honked, system!.SurveyState);
         Assert.Equal(2, system.NonBodySignals);
+    }
+
+    [Fact]
+    public async Task ImportAsync_DetailedScan_MarksBodyMappedAutomatically()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var bodyRepository = new CelestialBodyRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447"}
+{"timestamp":"2024-01-01T00:00:02Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","ScanType":"Detailed"}
+""");
+
+        await reader.ImportAsync(
+            journal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            celestialBodyRepository: bodyRepository);
+
+        var body = await context.CelestialBodies.SingleAsync();
+        Assert.Equal(ScanStatus.Mapped, body.ScanStatus);
+    }
+
+    [Fact]
+    public async Task ImportAsync_BasicScan_FallsBackToDiscovered()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var bodyRepository = new CelestialBodyRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447"}
+{"timestamp":"2024-01-01T00:00:02Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","ScanType":"Basic"}
+""");
+
+        await reader.ImportAsync(
+            journal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            celestialBodyRepository: bodyRepository);
+
+        var body = await context.CelestialBodies.SingleAsync();
+        Assert.Equal(ScanStatus.Discovered, body.ScanStatus);
+    }
+
+    [Fact]
+    public async Task ImportAsync_SaaScanComplete_MarksExistingBodyMapped()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var bodyRepository = new CelestialBodyRepository(context);
+        var reader = new JournalReader();
+
+        using var firstJournal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447"}
+{"timestamp":"2024-01-01T00:00:02Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","ScanType":"FSS"}
+""");
+        await reader.ImportAsync(
+            firstJournal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            celestialBodyRepository: bodyRepository);
+
+        var bodyBefore = await context.CelestialBodies.SingleAsync();
+        Assert.Equal(ScanStatus.FssScanned, bodyBefore.ScanStatus);
+
+        using var dssComplete = new StringReader("""
+{"timestamp":"2024-01-01T00:00:03Z","event":"SAAScanComplete","BodyName":"LHS 3447 1","ProbesUsed":4}
+""");
+        await reader.ImportAsync(
+            dssComplete,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            celestialBodyRepository: bodyRepository);
+
+        var bodyAfter = await context.CelestialBodies.SingleAsync();
+        Assert.Equal(ScanStatus.Mapped, bodyAfter.ScanStatus);
     }
 
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)

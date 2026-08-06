@@ -236,12 +236,14 @@ public sealed class JournalReader
             // Persist celestial body into the atlas when repository is available
             if (celestialBodyRepository is not null)
             {
+                var scanType = payload.TryGetValue("ScanType", out var st) ? st.GetString() : null;
+
                 var bodyExists = await celestialBodyRepository.ExistsByNameAsync(bodyNameValue, cancellationToken);
                 if (!bodyExists)
                 {
                     var kind = DetermineBodyKind(payload);
-                    var starClass = payload.TryGetValue("StarType", out var st) ? st.GetString() : null;
-                    var planetClass = payload.TryGetValue("PlanetClass", out var pc) ? pc.GetString() : null;
+                    var starClass = payload.TryGetValue("StarType", out var starType) ? starType.GetString() : null;
+                    var planetClass = payload.TryGetValue("PlanetClass", out var planetClassElem) ? planetClassElem.GetString() : null;
                     bool? isTerraformable = payload.TryGetValue("TerraformState", out var tf)
                         ? tf.GetString() == "Terraformable"
                         : null;
@@ -261,12 +263,39 @@ public sealed class JournalReader
                         planetClass,
                         isTerraformable,
                         distanceLs,
-                        ScanStatus.FssScanned,
+                        DeriveScanStatus(scanType),
                         IsWorthDss(planetClass, isTerraformable));
                     await celestialBodyRepository.SaveAsync(body, cancellationToken);
 
                     await MarkSystemFssScannedAsync(starSystemRepository, bodyNameValue, cancellationToken);
                 }
+                else if (DeriveScanStatus(scanType) == ScanStatus.Mapped)
+                {
+                    // A Detailed Surface Scanner pass on an already-catalogued body upgrades it to Mapped.
+                    var existingBody = await celestialBodyRepository.FindByNameAsync(bodyNameValue, cancellationToken);
+                    if (existingBody is not null && existingBody.ScanStatus != ScanStatus.Mapped)
+                    {
+                        await celestialBodyRepository.UpdateScanStatusAsync(existingBody.Id, ScanStatus.Mapped, cancellationToken);
+                    }
+                }
+            }
+
+            return;
+        }
+
+        if (eventType == "SAAScanComplete" && payload.TryGetValue("BodyName", out var mappedBodyName))
+        {
+            var mappedName = mappedBodyName.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(mappedName) || celestialBodyRepository is null)
+            {
+                return;
+            }
+
+            // A Detailed Surface Scanner pass completed: the body is now fully mapped.
+            var existingBody = await celestialBodyRepository.FindByNameAsync(mappedName, cancellationToken);
+            if (existingBody is not null && existingBody.ScanStatus != ScanStatus.Mapped)
+            {
+                await celestialBodyRepository.UpdateScanStatusAsync(existingBody.Id, ScanStatus.Mapped, cancellationToken);
             }
 
             return;
@@ -341,6 +370,18 @@ public sealed class JournalReader
             await evidenceRepository.SaveAsync(evidence, cancellationToken);
         }
     }
+
+    /// <summary>
+    /// Maps the journal <c>ScanType</c> field to a scan depth. A Detailed Surface Scanner
+    /// pass (<c>Detailed</c>) fully maps the body; FSS/auto scans resolve it; a basic
+    /// discovery scan only detects it.
+    /// </summary>
+    private static ScanStatus DeriveScanStatus(string? scanType) => scanType switch
+    {
+        "Detailed" => ScanStatus.Mapped,
+        "FSS" or "AutoScan" => ScanStatus.FssScanned,
+        _ => ScanStatus.Discovered
+    };
 
     private static async Task MarkSystemFssScannedAsync(
         IStarSystemRepository starSystemRepository,

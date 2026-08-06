@@ -97,12 +97,9 @@
                 </DataTemplate>
               </ListBox.ItemTemplate>
             </ListBox>
-            <Button Classes="action" HorizontalAlignment="Left" Command="{Binding MarkDssMappedCommand}">
-              <TextBlock Text="Mark DSS Mapped" />
-            </Button>
             <TextBlock Text="{Binding NeedsDssSummary}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
             <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <TextBlock Text="Bodies marked as needing DSS are surface-scan candidates. Mark one as mapped once you have run the Detailed Surface Scanner." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            <TextBlock Text="Scan progress comes straight from your journal files. A body is listed once the honk detects it, upgraded when you FSS it, and marked mapped automatically when a Detailed Surface Scanner pass completes." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </StackPanel>

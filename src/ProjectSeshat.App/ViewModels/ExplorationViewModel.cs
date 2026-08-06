@@ -29,7 +29,6 @@ public sealed class ExplorationViewModel : ViewModelBase
         _celestialBodyRepository = celestialBodyRepository;
 
         SelectExploreItemCommand = new RelayCommand<ExploreItem>(SelectExploreItem);
-        MarkDssMappedCommand = new RelayCommand(MarkDssMapped);
         RefreshExploreView();
     }
 
@@ -74,8 +73,6 @@ public sealed class ExplorationViewModel : ViewModelBase
         : $"{SelectedBody.Label} \u2014 {SelectedBody.ScanLabel}.";
 
     public ICommand SelectExploreItemCommand { get; }
-
-    public ICommand MarkDssMappedCommand { get; }
 
     public string NeedsDssSummary => _celestialBodyRepository is null
         ? string.Empty
@@ -164,46 +161,6 @@ public sealed class ExplorationViewModel : ViewModelBase
         }
 
         OnPropertyChanged(nameof(SelectedBodyStatus));
-    }
-
-    private void MarkDssMapped()
-    {
-        if (_celestialBodyRepository is null || SelectedBody is null)
-        {
-            return;
-        }
-
-        try
-        {
-            _celestialBodyRepository
-                .UpdateScanStatusAsync(SelectedBody.BodyId, ScanStatus.Mapped)
-                .GetAwaiter()
-                .GetResult();
-
-            if (SelectedExploreItem is not null)
-            {
-                SelectExploreItem(SelectedExploreItem);
-            }
-
-            RefreshExploreView();
-        }
-        catch (Exception)
-        {
-            // Surface the error quietly to avoid breaking the view.
-        }
-    }
-
-    private sealed class RelayCommand(Action execute) : ICommand
-    {
-        public event EventHandler? CanExecuteChanged
-        {
-            add { }
-            remove { }
-        }
-
-        public bool CanExecute(object? parameter) => true;
-
-        public void Execute(object? parameter) => execute();
     }
 
     private sealed class RelayCommand<T>(Action<T?> execute) : ICommand

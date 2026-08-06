@@ -112,6 +112,9 @@ public sealed class AtlasServiceTests
         public Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
             => Task.FromResult(_bodies.Any(b => b.Name == name));
 
+        public Task<CelestialBody?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
+            => Task.FromResult(_bodies.FirstOrDefault(b => b.Name == name));
+
         public Task<IReadOnlyList<CelestialBody>> FindBySystemIdAsync(StarSystemId systemId, CancellationToken cancellationToken = default)
             => Task.FromResult<IReadOnlyList<CelestialBody>>(_bodies.Where(b => b.SystemId == systemId).ToList());
 

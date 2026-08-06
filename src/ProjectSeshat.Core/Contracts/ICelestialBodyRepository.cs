@@ -13,6 +13,8 @@ public interface ICelestialBodyRepository
 
     Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
 
+    Task<CelestialBody?> FindByNameAsync(string name, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<CelestialBody>> FindBySystemIdAsync(StarSystemId systemId, CancellationToken cancellationToken = default);
 
     Task<int> CountForSystemAsync(StarSystemId systemId, CancellationToken cancellationToken = default);

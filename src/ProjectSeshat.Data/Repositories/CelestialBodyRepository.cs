@@ -37,6 +37,9 @@ public sealed class CelestialBodyRepository : ICelestialBodyRepository
     public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
         => await _context.CelestialBodies.AnyAsync(b => b.Name == name, cancellationToken);
 
+    public async Task<CelestialBody?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
+        => await _context.CelestialBodies.FirstOrDefaultAsync(b => b.Name == name, cancellationToken);
+
     public async Task<IReadOnlyList<CelestialBody>> FindBySystemIdAsync(StarSystemId systemId, CancellationToken cancellationToken = default)
         => await _context.CelestialBodies
             .Where(b => b.SystemId == systemId)
