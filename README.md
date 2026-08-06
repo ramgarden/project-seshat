@@ -27,7 +27,7 @@ dotnet build ProjectSeshat.sln
 dotnet test ProjectSeshat.sln
 ```
 
-The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core.
+The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core. It automatically watches your Elite Dangerous journal folder and tail-imports new events as you play, so the statistics and search guide stay current without any manual action (already-loaded content is deduplicated by fingerprint/file path).
 
 ## Guided search
 

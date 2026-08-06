@@ -1,10 +1,4 @@
 using System;
-using System.Collections.Generic;
-using System.IO;
-using System.Linq;
-using System.Threading;
-using System.Threading.Tasks;
-using System.Windows.Input;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Journals;
 
@@ -16,14 +10,12 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IStarSystemRepository _starSystemRepository;
     private readonly ICommanderRepository _commanderRepository;
     private readonly IEvidenceRepository _evidenceRepository;
-    private readonly IJournalImportTrackerRepository? _journalImportTrackerRepository;
     private readonly ICelestialBodyRepository? _celestialBodyRepository;
     private readonly ICodexEntryRepository? _codexEntryRepository;
     private readonly IObservationRepository? _observationRepository;
     private readonly JournalPathResolver _journalPathResolver;
-    private readonly JournalReader _journalReader;
 
-    private string _statusMessage = "Preparing the research dashboard";
+    private string _statusMessage = "Watching for journal changes";
     private string _journalPathStatus = "Searching for journal files";
     private string _loadingProgress = "0/0 files";
     private string _activeFileName = "No file selected";
@@ -33,15 +25,12 @@ public sealed class DashboardViewModel : ViewModelBase
     private int _bodiesIndexedCount;
     private int _codexEntriesCount;
     private int _observationsCount;
-    private bool _isLoading;
 
     public DashboardViewModel(
         IStarSystemRepository starSystemRepository,
         ICommanderRepository commanderRepository,
         IEvidenceRepository evidenceRepository,
-        IJournalImportTrackerRepository? journalImportTrackerRepository = null,
         JournalPathResolver? journalPathResolver = null,
-        JournalReader? journalReader = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null)
@@ -49,14 +38,17 @@ public sealed class DashboardViewModel : ViewModelBase
         _starSystemRepository = starSystemRepository;
         _commanderRepository = commanderRepository;
         _evidenceRepository = evidenceRepository;
-        _journalImportTrackerRepository = journalImportTrackerRepository;
         _celestialBodyRepository = celestialBodyRepository;
         _codexEntryRepository = codexEntryRepository;
         _observationRepository = observationRepository;
         _journalPathResolver = journalPathResolver ?? new JournalPathResolver();
-        _journalReader = journalReader ?? new JournalReader();
 
-        LoadJournalFilesCommand = new RelayCommand(LoadJournalFiles);
+        var resolvedPath = _journalPathResolver.ResolvePath();
+        if (resolvedPath is not null)
+        {
+            JournalPathStatus = $"Using journal folder: {resolvedPath}";
+        }
+
         RefreshStats();
     }
 
@@ -128,16 +120,6 @@ public sealed class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _activeFileName, value);
     }
 
-    public bool IsLoading
-    {
-        get => _isLoading;
-        private set => SetProperty(ref _isLoading, value);
-    }
-
-    public ICommand LoadJournalFilesCommand { get; }
-
-    public event EventHandler? DataImported;
-
     public void RefreshStats()
     {
         SystemsIndexedCount = _starSystemRepository.CountAsync().GetAwaiter().GetResult();
@@ -148,101 +130,15 @@ public sealed class DashboardViewModel : ViewModelBase
         ObservationsCount = _observationRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
     }
 
-    private void LoadJournalFiles()
+    /// <summary>Reflects a live journal import pass so the status panel stays current automatically.</summary>
+    public void ReportLiveActivity(JournalScanResult result)
     {
-        var resolvedPath = _journalPathResolver.ResolvePath();
-        if (resolvedPath is null)
-        {
-            StatusMessage = "No journal path detected; configure Elite Dangerous journals manually";
-            JournalPathStatus = "Journal files were not found. Configure the folder manually if needed.";
-            LoadingProgress = "0/0 files";
-            ActiveFileName = "No file selected";
-            IsLoading = false;
-            return;
-        }
+        ActiveFileName = result.LinesImported > 0 ? "Watching live" : "Up to date";
+        LoadingProgress = $"{result.LinesImported} new line{(result.LinesImported == 1 ? "" : "s")} this pass";
+        StatusMessage = result.LinesImported > 0
+            ? $"Live import complete \u2014 {result.LinesImported} new journal line{(result.LinesImported == 1 ? "" : "s")}"
+            : $"Watching for journal changes \u2014 no new events since the last scan";
 
-        var files = Directory.EnumerateFiles(resolvedPath, "Journal*.log", SearchOption.TopDirectoryOnly)
-            .OrderByDescending(File.GetLastWriteTimeUtc)
-            .ToList();
-
-        if (files.Count == 0)
-        {
-            StatusMessage = "Journal folder discovered, but no files were found";
-            JournalPathStatus = $"Using journal folder: {resolvedPath}";
-            LoadingProgress = "0/0 files";
-            ActiveFileName = "No file selected";
-            IsLoading = false;
-            return;
-        }
-
-        IsLoading = true;
-        StatusMessage = "Loading journal files";
-        JournalPathStatus = $"Using journal folder: {resolvedPath}";
-        LoadingProgress = $"0/{files.Count} files";
-        ActiveFileName = "Preparing...";
-
-        _ = Task.Run(async () =>
-        {
-            for (var index = 0; index < files.Count; index++)
-            {
-                var file = files[index];
-                var fileName = Path.GetFileName(file);
-                LoadingProgress = $"{index + 1}/{files.Count} files";
-                ActiveFileName = fileName;
-                StatusMessage = $"Scanning {fileName}";
-
-                try
-                {
-                    var content = File.ReadAllText(file);
-                    var contentFingerprint = JournalReader.ComputeFingerprint(content);
-                    using var reader = new StringReader(content);
-                    using var timeoutCts = new CancellationTokenSource(TimeSpan.FromSeconds(30));
-                    await _journalReader.ImportAsync(
-                        reader,
-                        _starSystemRepository,
-                        _commanderRepository,
-                        _evidenceRepository,
-                        _journalImportTrackerRepository,
-                        file,
-                        timeoutCts.Token,
-                        _celestialBodyRepository,
-                        _codexEntryRepository,
-                        contentFingerprint);
-                }
-                catch (OperationCanceledException)
-                {
-                    StatusMessage = $"Timed out while processing {fileName}; moving on to the next file";
-                    ActiveFileName = fileName;
-                }
-                catch (Exception ex)
-                {
-                    StatusMessage = $"Skipped {fileName}: {ex.Message}";
-                    ActiveFileName = fileName;
-                }
-
-                RefreshStats();
-                DataImported?.Invoke(this, EventArgs.Empty);
-            }
-
-            StatusMessage = "Journal import complete";
-            LoadingProgress = $"{files.Count}/{files.Count} files";
-            ActiveFileName = "Finished";
-            RefreshStats();
-            DataImported?.Invoke(this, EventArgs.Empty);
-            IsLoading = false;
-        });
-    }
-
-    private sealed class RelayCommand(Action execute) : ICommand
-    {
-        public event EventHandler? CanExecuteChanged
-        {
-            add { }
-            remove { }
-        }
-
-        public bool CanExecute(object? parameter) => true;
-
-        public void Execute(object? parameter) => execute();
+        RefreshStats();
     }
 }

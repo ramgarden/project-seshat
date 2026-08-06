@@ -130,10 +130,7 @@
             <TextBlock Text="{Binding SelectedTargetTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
             <TextBlock Text="{Binding SelectedTargetDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
             <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <Button Classes="action" HorizontalAlignment="Left" Command="{Binding RefreshCommand}">
-              <TextBlock Text="Rescan" />
-            </Button>
-            <TextBlock Text="The guide works in order: honk everywhere, FSS systems the honk flagged, then DSS only the bodies that turned out worth surface-mapping." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            <TextBlock Text="The guide works in order: honk everywhere, FSS systems the honk flagged, then DSS only the bodies that turned out worth surface-mapping. It updates automatically as your journal files change." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
           </StackPanel>
         </Border>
       </StackPanel>

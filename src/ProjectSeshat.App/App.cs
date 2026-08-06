@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Data;
 using ProjectSeshat.Data.Repositories;
 using ProjectSeshat.Investigations;
@@ -57,21 +58,55 @@ public sealed class App : Application
         var atlasService = new AtlasService();
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
+        var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository);
 
-        return new MainWindowViewModel(
+        var viewModel = new MainWindowViewModel(
             starSystemRepository,
             commanderRepository,
             evidenceRepository,
             pathResolver,
-            journalReader,
-            importTrackerRepository,
             celestialBodyRepository,
             codexEntryRepository,
             observationRepository,
             researchThreadEngine,
             investigationService,
-            atlasService);
+            atlasService,
+            journalWatcher);
+
+        return viewModel;
     }
 
-    public static MainWindow CreateMainWindow() => new(CreateViewModel());
+    private static JournalWatcher? CreateJournalWatcher(
+        JournalPathResolver pathResolver,
+        JournalReader journalReader,
+        IStarSystemRepository starSystemRepository,
+        ICommanderRepository commanderRepository,
+        IEvidenceRepository evidenceRepository,
+        IJournalImportTrackerRepository importTrackerRepository,
+        ICelestialBodyRepository? celestialBodyRepository,
+        ICodexEntryRepository? codexEntryRepository)
+    {
+        var resolvedPath = pathResolver.ResolvePath();
+        if (resolvedPath is null)
+        {
+            return null;
+        }
+
+        return new JournalWatcher(
+            resolvedPath,
+            journalReader,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            importTrackerRepository,
+            celestialBodyRepository,
+            codexEntryRepository);
+    }
+
+    public static MainWindow CreateMainWindow()
+    {
+        var viewModel = CreateViewModel();
+        viewModel.StartJournalWatcher();
+        return new MainWindow(viewModel);
+    }
 }

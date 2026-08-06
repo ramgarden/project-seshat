@@ -8,7 +8,7 @@ Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous
 
 Milestones 0.2–0.9 built up the production features: a visible dashboard, the shared Core domain model, SQLite/EF Core persistence, journal ingestion, sidebar navigation, atlas/codex/observation data, research-thread workflows, and evidence capture/investigations. Milestone 1.0 added the Atlas undiscovered-region survey (galactic coordinates + region ranking), and Milestone 1.1 delivered **guided search**.
 
-The current product focus is **guided search**, embodied in the **Atlas Survey** page. It walks the user through the Elite Dangerous scan pipeline so they always know where to search next:
+The current product focus is **guided search**, embodied in the **Atlas Survey** page, which is now driven by a **live journal auto-watch**. It walks the user through the Elite Dangerous scan pipeline so they always know where to search next, and stays current automatically as the game writes journal events:
 
 1. **HONK** — systems you've reached but haven't discovery-scanned yet, ordered closest-first.
 2. **FSS** — systems the honk flagged with non-body signals, ordered by signal count (most interesting first), to resolve with the Full Spectrum Scanner.
@@ -45,7 +45,7 @@ Before changing anything, run `git status --short`: work may be intentionally un
 | `ProjectSeshat.App` | Avalonia desktop UI, view models, and composition | Dashboard, Exploration, Research Threads, and Atlas Survey views in a left-sidebar navigation shell. |
 | `ProjectSeshat.Core` | Stable domain model and contracts | Systems, bodies, evidence, threads, observations, codex, survey state, and repository abstractions are implemented. |
 | `ProjectSeshat.Data` | Persistence boundary (SQLite/EF Core) | DbContext, repositories, and EF migrations implemented. Database lives in user AppData. |
-| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Imports commander identity, jumps (+ StarPos), scans, and the system honk; deduped by content fingerprint. |
+| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Imports commander identity, jumps (+ StarPos), scans, and the system honk; deduped by content fingerprint. `JournalWatcher` live-tails the journal directory. |
 | `ProjectSeshat.Atlas` | Spatial and astronomical research | Coordinates survey, region ranking, and the guided honk/FSS/DSS search guide (`AtlasService`). |
 | `ProjectSeshat.ThreadEngine` | Research-thread workflows | `ResearchThreadEngine` implemented. |
 | `ProjectSeshat.Codex` | Discovery and codex knowledge | Codex entries modeled and persisted. |
@@ -84,6 +84,18 @@ Repository contracts accept a `CancellationToken`; persistence implementations m
 - `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Atlas Survey page (Milestone 1.1).
 
 Presentation lives in `src/ProjectSeshat.App/ViewModels/AtlasViewModel.cs` (`HonkItems`, `FssItems`, `DssItems`, selection detail) and `Views/AtlasView.axaml`. `MainWindowViewModel` wires the `Atlas` page into navigation and refreshes it whenever journal data is imported.
+
+## Live journal auto-watch
+
+`ProjectSeshat.Journals/JournalWatcher.cs` makes journal ingestion fully automatic — there is no manual import button and no rescan button:
+
+- Uses a `FileSystemWatcher` on the resolved journal directory (debounced ~500 ms) so new events are picked up as you play.
+- On first touch of each file it imports it **in full**, using the `JournalImportTrackerRepository` to skip content that was already loaded (SHA-256 fingerprint and file path) and to record what has been ingested — so re-runs and app restarts never double-import.
+- Thereafter it **tail-reads** each journal file by byte offset, importing only appended lines (`ScanFileAsync`/`ScanDirectoryAsync`, used directly by tests), keeping re-scans cheap and idempotent.
+- After each pass with new lines it raises `Imported`; `MainWindowViewModel` refreshes the dashboard stats/status, exploration list, and Atlas Survey guide.
+- Started automatically on app launch (`App.CreateMainWindow` → `MainWindowViewModel.StartJournalWatcher`).
+
+Because every import is idempotent at the domain level (existence checks on systems, bodies, evidence, codex) and guarded by the import tracker, automatic scanning is safe. The dashboard reflects live activity via `DashboardViewModel.ReportLiveActivity`.
 
 ## Desktop application
 
@@ -130,7 +142,8 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 Follow the `Next` section in [roadmap.md](roadmap.md). Current candidate next steps:
 
-- Expand the guided search experience (e.g., jump-plotting between honk targets, richer FSS/DSS details, filtering).
+- Expand the guided search experience (jump-plotting between honk targets, richer FSS/DSS details, filtering).
+- Add a sky-map / region visualization to help spot structures for the Raxxla hunt.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).
 
 ## Documentation maintenance

@@ -16,28 +16,26 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isExplorationActive;
     private bool _isThreadsActive;
     private bool _isAtlasActive;
+    private readonly JournalWatcher? _journalWatcher;
 
     public MainWindowViewModel(
         IStarSystemRepository starSystemRepository,
         ICommanderRepository commanderRepository,
         IEvidenceRepository evidenceRepository,
         JournalPathResolver? journalPathResolver = null,
-        JournalReader? journalReader = null,
-        IJournalImportTrackerRepository? journalImportTrackerRepository = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
         ResearchThreadEngine? researchThreadEngine = null,
         InvestigationService? investigationService = null,
-        AtlasService? atlasService = null)
+        AtlasService? atlasService = null,
+        JournalWatcher? journalWatcher = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
             commanderRepository,
             evidenceRepository,
-            journalImportTrackerRepository,
             journalPathResolver,
-            journalReader,
             celestialBodyRepository,
             codexEntryRepository,
             observationRepository);
@@ -51,12 +49,16 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Atlas = new AtlasViewModel(atlasService, starSystemRepository, celestialBodyRepository);
 
-        // Coordinate data updates
-        Dashboard.DataImported += (s, e) =>
+        _journalWatcher = journalWatcher;
+        if (_journalWatcher is not null)
         {
-            Exploration.RefreshExploreView();
-            Atlas.Refresh();
-        };
+            _journalWatcher.Imported += (s, e) =>
+            {
+                Dashboard.ReportLiveActivity(e);
+                Exploration.RefreshExploreView();
+                Atlas.Refresh();
+            };
+        }
 
         NavigateToDashboardCommand = new RelayCommand(() => CurrentPage = Dashboard);
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
@@ -125,6 +127,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand NavigateToThreadsCommand { get; }
 
     public ICommand NavigateToAtlasCommand { get; }
+
+    /// <summary>Starts live journal watching so the guide and stats update as the game writes new events.</summary>
+    public void StartJournalWatcher() => _journalWatcher?.Start();
 
     private void UpdateActiveStates()
     {

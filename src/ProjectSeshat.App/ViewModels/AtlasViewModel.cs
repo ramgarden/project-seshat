@@ -24,7 +24,6 @@ public sealed class AtlasViewModel : ViewModelBase
         _atlas = atlas;
         _systemRepository = systemRepository;
         _bodyRepository = bodyRepository;
-        RefreshCommand = new RelayCommand(Refresh);
         Refresh();
     }
 
@@ -57,8 +56,6 @@ public sealed class AtlasViewModel : ViewModelBase
 
     public string SelectedTargetDetail => SelectedTarget?.Detail ?? "Select an entry above to see where to search next.";
 
-    public ICommand RefreshCommand { get; }
-
     public void Refresh()
     {
         HonkItems.Clear();
@@ -89,19 +86,6 @@ public sealed class AtlasViewModel : ViewModelBase
         }
 
         SummaryText = $"Next: {guide.HonkCount} system{(guide.HonkCount == 1 ? "" : "s")} to honk, then {guide.FssCount} to FSS, and {guide.DssCount} bod{(guide.DssCount == 1 ? "y" : "ies")} worth a DSS scan.";
-    }
-
-    private sealed class RelayCommand(Action execute) : ICommand
-    {
-        public event EventHandler? CanExecuteChanged
-        {
-            add { }
-            remove { }
-        }
-
-        public bool CanExecute(object? parameter) => true;
-
-        public void Execute(object? parameter) => execute();
     }
 }
 

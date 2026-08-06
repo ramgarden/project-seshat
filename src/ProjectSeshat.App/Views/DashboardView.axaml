@@ -17,46 +17,11 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
-    <Style Selector="Button.action-btn">
-      <Setter Property="Background" Value="#36C5F0" />
-      <Setter Property="Foreground" Value="#08111D" />
-      <Setter Property="Padding" Value="16,10" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="Transitions">
-        <Transitions>
-          <BrushTransition Property="Background" Duration="0:0:0.12" />
-          <BrushTransition Property="Foreground" Duration="0:0:0.12" />
-        </Transitions>
-      </Setter>
-    </Style>
-    <Style Selector="Button.action-btn:pointerover">
-      <Setter Property="Background" Value="#2FA9DB" />
-      <Setter Property="Foreground" Value="#02101B" />
-    </Style>
-    <Style Selector="Button.action-btn:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#2FA9DB" />
-      <Setter Property="Foreground" Value="#02101B" />
-    </Style>
-    <Style Selector="Button.action-btn:pressed">
-      <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
-    <Style Selector="Button.action-btn:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
   </UserControl.Styles>
 
-  <Grid RowDefinitions="Auto,*,Auto">
-    <!-- Top Action bar -->
-    <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="16" Margin="0,0,0,20">
-      <Button Classes="action-btn"
-              Content="Load journal files"
-              Command="{Binding LoadJournalFilesCommand}" />
-    </StackPanel>
-
+  <Grid RowDefinitions="*,Auto">
     <!-- Main Stats Section -->
-    <Border Grid.Row="1" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
+    <Border Grid.Row="0" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
       <StackPanel Spacing="18">
         <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
 
@@ -106,8 +71,8 @@
       </StackPanel>
     </Border>
 
-    <!-- Ingestion Progress Panel at the bottom of the dashboard page -->
-    <Border Grid.Row="2" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
+    <!-- Live Ingestion Panel -->
+    <Border Grid.Row="1" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
       <StackPanel Spacing="10">
         <StackPanel Orientation="Horizontal" Spacing="12">
           <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />

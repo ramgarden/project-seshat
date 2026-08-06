@@ -60,10 +60,18 @@
 - [x] Add EF Core migrations so schema changes no longer require regenerating the database.
 - [x] Apply migrations on app startup (replaces `EnsureCreated`).
 
+## Milestone 1.3 — Live journal auto-watch
+
+- [x] Watch the Elite Dangerous journal directory and tail-import new events as gameplay writes them.
+- [x] Auto-refresh the dashboard stats, exploration list, and Atlas Survey guide on import (no manual rescan).
+- [x] Start watching automatically on app launch; remove the manual "Load journal files" and "Rescan" buttons.
+- [x] Deduplicate already-loaded journal content (content fingerprint + file path) so restarts never double-import.
+
 ## Next
 
 - [ ] Expand the guided search experience (jump-plotting between honk targets, richer FSS/DSS details, filtering).
 - [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
+- [ ] Sky-map / region visualization for the Raxxla hunt.
 
 ## Quality
 
