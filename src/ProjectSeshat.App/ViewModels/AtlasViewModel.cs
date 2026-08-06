@@ -1,5 +1,7 @@
 using System;
+using System.Collections.Generic;
 using System.Collections.ObjectModel;
+using System.Linq;
 using System.Windows.Input;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Core.Contracts;
@@ -19,6 +21,7 @@ public sealed class AtlasViewModel : ViewModelBase
     private string _nextJumpTitle = "No next jump";
     private string _nextJumpDetail = "Every reachable system is already searched. Import more journals or plot deeper.";
     private GuideTarget? _selectedTarget;
+    private IReadOnlyList<SkyPoint> _skyMapPoints = Array.Empty<SkyPoint>();
 
     public AtlasViewModel(
         AtlasService? atlas = null,
@@ -63,6 +66,12 @@ public sealed class AtlasViewModel : ViewModelBase
         private set => SetProperty(ref _nextJumpDetail, value);
     }
 
+    public IReadOnlyList<SkyPoint> SkyMapPoints
+    {
+        get => _skyMapPoints;
+        private set => SetProperty(ref _skyMapPoints, value);
+    }
+
     public GuideTarget? SelectedTarget
     {
         get => _selectedTarget;
@@ -89,10 +98,12 @@ public sealed class AtlasViewModel : ViewModelBase
         if (_atlas is null || _systemRepository is null || _bodyRepository is null)
         {
             SummaryText = "Search guide is unavailable in this context.";
+            SkyMapPoints = Array.Empty<SkyPoint>();
             return;
         }
 
         var guide = _atlas.BuildSearchGuideAsync(_systemRepository, _bodyRepository, _navigationRepository).GetAwaiter().GetResult();
+        RefreshSkyMap(guide);
 
         CurrentSystemText = guide.CurrentSystemName is not null
             ? $"You are at {guide.CurrentSystemName}"
@@ -128,6 +139,51 @@ public sealed class AtlasViewModel : ViewModelBase
         }
 
         SummaryText = $"Next: {guide.HonkCount} system{(guide.HonkCount == 1 ? "" : "s")} to honk, then {guide.FssCount} to FSS, and {guide.DssCount} bod{(guide.DssCount == 1 ? "y" : "ies")} worth a DSS scan.";
+    }
+
+    private void RefreshSkyMap(SearchGuide guide)
+    {
+        if (_systemRepository is null)
+        {
+            SkyMapPoints = Array.Empty<SkyPoint>();
+            return;
+        }
+
+        var points = new List<SkyPoint>();
+
+        var systems = _systemRepository.ListWithPositionAsync(1000).GetAwaiter().GetResult();
+        foreach (var system in systems)
+        {
+            if (system.Position is not null)
+            {
+                points.Add(new SkyPoint(system.Position, system.Name, SkyPointKind.System));
+            }
+        }
+
+        if (_atlas is not null)
+        {
+            var regions = _atlas.RankUndiscoveredRegionsAsync(_systemRepository, maxRegions: 12).GetAwaiter().GetResult();
+            foreach (var region in regions)
+            {
+                points.Add(new SkyPoint(region.Center, "Undiscovered region", SkyPointKind.Region));
+            }
+        }
+
+        if (guide.CurrentPosition is not null)
+        {
+            points.Add(new SkyPoint(guide.CurrentPosition, guide.CurrentSystemName ?? "You", SkyPointKind.Current));
+        }
+
+        if (guide.NeedHonk.Count > 0)
+        {
+            var next = _systemRepository.FindByNameAsync(guide.NeedHonk[0].SystemName).GetAwaiter().GetResult();
+            if (next?.Position is not null)
+            {
+                points.Add(new SkyPoint(next.Position, next.Name, SkyPointKind.Next));
+            }
+        }
+
+        SkyMapPoints = points;
     }
 }
 

@@ -73,10 +73,14 @@
 - [x] Order the honk/FSS/DSS search guide by distance from the commander's current position.
 - [x] Present an ordered jump route (nearest-first honk list) plus an explicit "next jump" target in the Atlas Survey UI.
 
+## Milestone 1.5 — Galactic sky-map
+
+- [x] Render surveyed systems, ranked undiscovered regions, the commander's current position, and the next jump target on an interactive 3D galactic sky-map.
+- [x] Support drag-to-rotate and scroll-to-zoom on the map; auto-update on journal import.
+
 ## Next
 
 - [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
-- [ ] Sky-map / region visualization for the Raxxla hunt.
 - [ ] Richer FSS/DSS detail and filtering on the guided search.
 
 ## Quality

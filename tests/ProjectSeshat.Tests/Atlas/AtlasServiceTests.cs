@@ -1,3 +1,4 @@
+using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Core.Domain;
@@ -128,6 +129,25 @@ public sealed class AtlasServiceTests
 
         Assert.Null(guide.CurrentSystemName);
         Assert.Equal(2, guide.NeedHonk.Count);
+    }
+
+    [Fact]
+    public void SkyMap_ExposesCurrentSystemAndNextTarget()
+    {
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        var next = new StarSystem(new StarSystemId(2), "NEXT", new GalacticCoordinates(0, 0, 100), SystemSurveyState.Unexplored);
+        var systems = new InMemorySystemRepository();
+        systems.Add(here);
+        systems.Add(next);
+
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var viewModel = new AtlasViewModel(new AtlasService(), systems, new InMemoryBodyRepository(), nav);
+
+        Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.Current && p.Name == "HERE");
+        Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.Next && p.Name == "NEXT");
+        Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.System);
     }
 
     private sealed class InMemoryNavigationStateRepository : INavigationStateRepository

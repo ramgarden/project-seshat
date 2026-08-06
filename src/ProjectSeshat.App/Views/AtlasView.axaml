@@ -1,6 +1,7 @@
 <UserControl xmlns="https://github.com/avaloniaui"
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             xmlns:controls="clr-namespace:ProjectSeshat.App.Controls"
              x:Class="ProjectSeshat.App.Views.AtlasView"
              x:DataType="vm:AtlasViewModel">
   <UserControl.Styles>
@@ -16,13 +17,17 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.2" />
     </Style>
+    <Style Selector="TextBlock.legend">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
     <Style Selector="ListBox">
       <Setter Property="Background" Value="Transparent" />
       <Setter Property="BorderThickness" Value="0" />
       <Setter Property="Padding" Value="0" />
     </Style>
     <Style Selector="ListBoxItem">
-      <Setter Property="Padding" Value="0,0,0,8" />
+      <Setter Property="Padding" Value="0,0,0,6" />
       <Setter Property="Background" Value="Transparent" />
     </Style>
     <Style Selector="ListBoxItem:pointerover /template/ ContentPresenter">
@@ -31,45 +36,46 @@
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
-    <Style Selector="Button.action">
-      <Setter Property="Background" Value="#1C8BC4" />
-      <Setter Property="Foreground" Value="#03111B" />
-      <Setter Property="FontWeight" Value="SemiBold" />
-      <Setter Property="BorderThickness" Value="0" />
-      <Setter Property="CornerRadius" Value="4" />
-      <Setter Property="Padding" Value="14,8" />
-    </Style>
-    <Style Selector="Button.action:pointerover">
-      <Setter Property="Background" Value="#36C5F0" />
-    </Style>
-    <Style Selector="Button.action:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#36C5F0" />
-    </Style>
-    <Style Selector="Button.action:pressed">
-      <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
-    <Style Selector="Button.action:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="#0F5F82" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
-    </Style>
   </UserControl.Styles>
 
-  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24">
-    <Grid ColumnDefinitions="360,*" RowDefinitions="Auto,*">
-      <StackPanel Grid.Row="0" Grid.Column="0" Spacing="12" Margin="0,0,0,16">
-        <TextBlock Classes="section-label" Text="SEARCH GUIDE" />
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+    <Grid RowDefinitions="Auto,Auto,*">
+      <!-- Header -->
+      <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,12">
+        <TextBlock Classes="section-label" Text="SEARCH GUIDE — GALACTIC ATLAS" />
         <TextBlock Text="{Binding CurrentSystemText}" Foreground="#7FCFB0" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
         <TextBlock Text="{Binding SummaryText}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
       </StackPanel>
 
-      <ScrollViewer Grid.Row="1" Grid.Column="0" Margin="0,8,16,0">
-        <StackPanel Spacing="14">
-          <StackPanel Spacing="6">
+      <!-- Sky map -->
+      <Border Grid.Row="1" Background="#050D16" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Height="300">
+        <Grid RowDefinitions="Auto,*">
+          <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="14" Margin="16,8,16,4">
+            <TextBlock Classes="stage-label" Text="GALACTIC SKY-MAP" />
+            <TextBlock Text="drag to rotate · scroll to zoom" Foreground="#83B8D5" FontSize="11" VerticalAlignment="Center" />
+            <StackPanel Orientation="Horizontal" Spacing="6">
+              <Ellipse Width="9" Height="9" Fill="#FFD24D" VerticalAlignment="Center" />
+              <TextBlock Classes="legend" Text="you" Foreground="#D2EAF7" />
+              <Ellipse Width="9" Height="9" Fill="#FF5A5A" Margin="8,0,0,0" VerticalAlignment="Center" />
+              <TextBlock Classes="legend" Text="next jump" Foreground="#D2EAF7" />
+              <Ellipse Width="9" Height="9" Fill="#36C5F0" Margin="8,0,0,0" VerticalAlignment="Center" />
+              <TextBlock Classes="legend" Text="surveyed system" Foreground="#D2EAF7" />
+              <Ellipse Width="9" Height="9" Fill="#7FCFB0" Margin="8,0,0,0" VerticalAlignment="Center" />
+              <TextBlock Classes="legend" Text="undiscovered region" Foreground="#D2EAF7" />
+            </StackPanel>
+          </StackPanel>
+          <controls:AtlasSkyMapControl Grid.Row="1" Points="{Binding SkyMapPoints}" />
+        </Grid>
+      </Border>
+
+      <!-- Guide and focus -->
+      <Grid Grid.Row="2" ColumnDefinitions="*,360" Margin="0,14,0,0">
+        <Grid Grid.Column="0" ColumnDefinitions="*,*,*" Margin="0,0,16,0">
+          <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
             <TextBlock Classes="stage-label" Text="1 · NEEDS HONK" />
             <ListBox ItemsSource="{Binding HonkItems}"
                      SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
-                     MaxHeight="120"
+                     MaxHeight="140"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
               <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -84,11 +90,11 @@
             </ListBox>
           </StackPanel>
 
-          <StackPanel Spacing="6">
+          <StackPanel Grid.Column="1" Spacing="6" Margin="0,0,8,0">
             <TextBlock Classes="stage-label" Text="2 · NEEDS FSS" />
             <ListBox ItemsSource="{Binding FssItems}"
                      SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
-                     MaxHeight="150"
+                     MaxHeight="140"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
               <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -103,11 +109,11 @@
             </ListBox>
           </StackPanel>
 
-          <StackPanel Spacing="6">
+          <StackPanel Grid.Column="2" Spacing="6">
             <TextBlock Classes="stage-label" Text="3 · NEEDS DSS" />
             <ListBox ItemsSource="{Binding DssItems}"
                      SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
-                     MaxHeight="150"
+                     MaxHeight="140"
                      ScrollViewer.VerticalScrollBarVisibility="Auto">
               <ListBox.ItemTemplate>
                 <DataTemplate>
@@ -121,33 +127,34 @@
               </ListBox.ItemTemplate>
             </ListBox>
           </StackPanel>
-        </StackPanel>
-      </ScrollViewer>
+        </Grid>
 
-      <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="16" Margin="24,0,0,0">
-        <TextBlock Classes="section-label" Text="FOCUS" />
-        <Border Background="#06221A" BorderBrush="#2C8F6E" BorderThickness="1" CornerRadius="6" Padding="20">
-          <StackPanel Spacing="8">
-            <TextBlock Classes="stage-label" Text="CURRENT POSITION" />
-            <TextBlock Text="{Binding CurrentSystemText}" Foreground="#E5F5FF" FontSize="16" FontWeight="SemiBold" TextWrapping="Wrap" />
+        <ScrollViewer Grid.Column="1">
+          <StackPanel Spacing="12">
+            <Border Background="#06221A" BorderBrush="#2C8F6E" BorderThickness="1" CornerRadius="6" Padding="16">
+              <StackPanel Spacing="6">
+                <TextBlock Classes="stage-label" Text="CURRENT POSITION" />
+                <TextBlock Text="{Binding CurrentSystemText}" Foreground="#E5F5FF" FontSize="15" FontWeight="SemiBold" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
+            <Border Background="#08111D" BorderBrush="#36C5F0" BorderThickness="1" CornerRadius="6" Padding="16">
+              <StackPanel Spacing="8">
+                <TextBlock Classes="stage-label" Text="NEXT JUMP — PLOT A ROUTE" />
+                <TextBlock Text="{Binding NextJumpTitle}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                <TextBlock Text="{Binding NextJumpDetail}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" LineHeight="19" />
+              </StackPanel>
+            </Border>
+            <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="16">
+              <StackPanel Spacing="12">
+                <TextBlock Text="{Binding SelectedTargetTitle}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" />
+                <TextBlock Text="{Binding SelectedTargetDetail}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" LineHeight="19" />
+                <Border Height="1" Background="#1A4D67" Margin="0,4" />
+                <TextBlock Text="The honk list is your jump route, ordered nearest-first from where you are now. The sky-map shows every surveyed system, the ranked undiscovered regions, and your next target. It updates automatically as your journal files change." Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" />
+              </StackPanel>
+            </Border>
           </StackPanel>
-        </Border>
-        <Border Background="#08111D" BorderBrush="#36C5F0" BorderThickness="1" CornerRadius="6" Padding="20">
-          <StackPanel Spacing="10">
-            <TextBlock Classes="stage-label" Text="NEXT JUMP — PLOT A ROUTE" />
-            <TextBlock Text="{Binding NextJumpTitle}" Foreground="#E5F5FF" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
-            <TextBlock Text="{Binding NextJumpDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
-          </StackPanel>
-        </Border>
-        <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
-          <StackPanel Spacing="16">
-            <TextBlock Text="{Binding SelectedTargetTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SelectedTargetDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
-            <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <TextBlock Text="The guide works in order: honk everywhere, FSS systems the honk flagged, then DSS only the bodies that turned out worth surface-mapping. The honk list is your jump route, ordered nearest-first from where you are now. It updates automatically as your journal files change." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-      </StackPanel>
+        </ScrollViewer>
+      </Grid>
     </Grid>
   </Border>
 </UserControl>

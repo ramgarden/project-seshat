@@ -34,7 +34,11 @@ The guide is anchored to the commander's real position. `JournalReader` records 
 - FSS targets are ranked by signal count then distance from the current position; DSS bodies stay ordered by distance from their arrival point.
 - When no position is known yet, it falls back to the centroid of all surveyed systems.
 
-`AtlasViewModel` surfaces `CurrentSystemText`, the ordered honk route (step-numbered), and a dedicated `NextJumpTitle` / `NextJumpDetail` focus card in `AtlasView.axaml`.
+`AtlasViewModel` surfaces `CurrentSystemText`, the ordered honk route (step-numbered), a dedicated `NextJumpTitle` / `NextJumpDetail` focus card in `AtlasView.axaml`, and `SkyMapPoints` for the visual.
+
+### Galactic sky-map
+
+`ProjectSeshat.App/Controls/AtlasSkyMapControl.cs` is a custom, interactive 3D projection control rendered with Avalonia's `DrawingContext`. It draws surveyed systems (cyan), ranked undiscovered regions (green, from `AtlasService.RankUndiscoveredRegionsAsync`), the commander's current position (gold), and the next jump target (red, a line back to center). Drag rotates the view, scroll zooms, and points are drawn far-to-near for a depth cue. `AtlasViewModel.RefreshSkyMap` builds `SkyMapPoints` (a `SkyPoint`/`SkyPointKind` collection) and the control's `Points` binding re-renders automatically; the whole Atlas page refreshes on live journal import.
 
 ## Quick start
 
@@ -153,7 +157,6 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 Follow the `Next` section in [roadmap.md](roadmap.md). Current candidate next steps:
 
-- Add a sky-map / region visualization to help spot structures for the Raxxla hunt.
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).
 
