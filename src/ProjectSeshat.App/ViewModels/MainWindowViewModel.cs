@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using ProjectSeshat.Atlas;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Investigations;
 using ProjectSeshat.Journals;
@@ -14,6 +15,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isDashboardActive;
     private bool _isExplorationActive;
     private bool _isThreadsActive;
+    private bool _isAtlasActive;
 
     public MainWindowViewModel(
         IStarSystemRepository starSystemRepository,
@@ -26,7 +28,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
         ResearchThreadEngine? researchThreadEngine = null,
-        InvestigationService? investigationService = null)
+        InvestigationService? investigationService = null,
+        AtlasService? atlasService = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -46,15 +49,19 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
+        Atlas = new AtlasViewModel(atlasService, starSystemRepository, celestialBodyRepository);
+
         // Coordinate data updates
         Dashboard.DataImported += (s, e) =>
         {
             Exploration.RefreshExploreView();
+            Atlas.Refresh();
         };
 
         NavigateToDashboardCommand = new RelayCommand(() => CurrentPage = Dashboard);
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
         NavigateToThreadsCommand = new RelayCommand(() => CurrentPage = Threads);
+        NavigateToAtlasCommand = new RelayCommand(() => CurrentPage = Atlas);
 
         // Start on Dashboard
         _currentPage = Dashboard;
@@ -72,6 +79,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ExplorationViewModel Exploration { get; }
 
     public ThreadsViewModel Threads { get; }
+
+    public AtlasViewModel Atlas { get; }
 
     public ViewModelBase CurrentPage
     {
@@ -103,17 +112,26 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isThreadsActive, value);
     }
 
+    public bool IsAtlasActive
+    {
+        get => _isAtlasActive;
+        private set => SetProperty(ref _isAtlasActive, value);
+    }
+
     public ICommand NavigateToDashboardCommand { get; }
 
     public ICommand NavigateToExplorationCommand { get; }
 
     public ICommand NavigateToThreadsCommand { get; }
 
+    public ICommand NavigateToAtlasCommand { get; }
+
     private void UpdateActiveStates()
     {
         IsDashboardActive = CurrentPage == Dashboard;
         IsExplorationActive = CurrentPage == Exploration;
         IsThreadsActive = CurrentPage == Threads;
+        IsAtlasActive = CurrentPage == Atlas;
     }
 
     private sealed class RelayCommand(Action execute) : ICommand

@@ -59,6 +59,16 @@ public sealed class CelestialBodyRepository : ICelestialBodyRepository
         return results.OrderBy(b => b.DistanceFromArrivalLs ?? double.MaxValue).ToList();
     }
 
+    public async Task<IReadOnlyList<CelestialBody>> ListDssCandidatesAsync(int maxCount, CancellationToken cancellationToken = default)
+    {
+        var results = await _context.CelestialBodies
+            .Where(b => b.WorthDss && b.ScanStatus != ScanStatus.Mapped)
+            .OrderBy(b => b.Name)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken);
+        return results.OrderBy(b => b.DistanceFromArrivalLs ?? double.MaxValue).ToList();
+    }
+
     public async ValueTask UpdateScanStatusAsync(CelestialBodyId id, ScanStatus status, CancellationToken cancellationToken = default)
     {
         var body = await _context.CelestialBodies.FirstOrDefaultAsync(b => b.Id == id, cancellationToken);

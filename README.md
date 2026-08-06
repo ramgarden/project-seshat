@@ -29,6 +29,16 @@ dotnet test ProjectSeshat.sln
 
 The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core.
 
+## Guided search
+
+The **Atlas Survey** page is a guided search tool that tells you what to do next as you work outward from surveyed space, in order:
+
+1. **HONK** — which systems you've reached but haven't discovery-scanned yet.
+2. **FSS** — which systems (the honk flagged with signals) to Full Spectrum Scan next.
+3. **DSS** — which specific bodies turned out worth Surface-mapping with the Detailed Surface Scanner.
+
+It's driven by your journal files: coordinates come from `StarPos` on `FSDJump`, the system honk from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events.
+
 See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) for the initial direction.
 
 Build: passing

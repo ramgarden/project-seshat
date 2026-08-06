@@ -1,5 +1,6 @@
 using Microsoft.Data.Sqlite;
 using Microsoft.EntityFrameworkCore;
+using ProjectSeshat.Core.Domain;
 using ProjectSeshat.Data;
 using ProjectSeshat.Data.Repositories;
 using ProjectSeshat.Journals;
@@ -91,6 +92,91 @@ public sealed class JournalReaderTests
         Assert.Equal(1, await starSystemRepository.CountAsync());
         Assert.Equal(1, await commanderRepository.CountAsync());
         Assert.Equal(1, await evidenceRepository.CountAsync());
+    }
+
+    [Fact]
+    public async Task ImportAsync_ParsesStarPosIntoCoordinates()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447","StarPos":[-23.40625,-72.4375,-35.34375]}
+""");
+
+        await reader.ImportAsync(journal, starSystemRepository, commanderRepository, evidenceRepository);
+
+        var system = await context.StarSystems.SingleAsync();
+        Assert.NotNull(system.Position);
+        Assert.Equal(-23.40625, system.Position!.X);
+        Assert.Equal(-72.4375, system.Position.Y);
+        Assert.Equal(-35.34375, system.Position.Z);
+    }
+
+    [Fact]
+    public async Task ImportAsync_GuidesSurveyPipeline()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var bodyRepository = new CelestialBodyRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447","StarPos":[-23.4,-72.4,-35.3]}
+{"timestamp":"2024-01-01T00:00:02Z","event":"FSSDiscoveryScan","StarSystem":"LHS 3447","BodyCount":5,"NonBodyCount":2}
+{"timestamp":"2024-01-01T00:00:03Z","event":"Scan","BodyName":"LHS 3447 1","PlanetClass":"Earthlike body","DistanceFromArrivalLS":1200}
+""");
+
+        await reader.ImportAsync(
+            journal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            celestialBodyRepository: bodyRepository);
+
+        var system = await starSystemRepository.FindByNameAsync("LHS 3447");
+        Assert.NotNull(system);
+        Assert.Equal(SystemSurveyState.FssScanned, system!.SurveyState);
+
+        var body = await context.CelestialBodies.SingleAsync();
+        Assert.True(body.WorthDss);
+        Assert.Equal(ScanStatus.FssScanned, body.ScanStatus);
+    }
+
+    [Fact]
+    public async Task ImportAsync_HonkMarksSystemNeedingFss()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447"}
+{"timestamp":"2024-01-01T00:00:02Z","event":"FSSDiscoveryScan","StarSystem":"LHS 3447","BodyCount":5,"NonBodyCount":2}
+""");
+
+        await reader.ImportAsync(journal, starSystemRepository, commanderRepository, evidenceRepository);
+
+        var system = await starSystemRepository.FindByNameAsync("LHS 3447");
+        Assert.NotNull(system);
+        Assert.Equal(SystemSurveyState.Honked, system!.SurveyState);
+        Assert.Equal(2, system.NonBodySignals);
     }
 
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)

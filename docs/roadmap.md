@@ -44,10 +44,26 @@
 ## Milestone 1.0 — .NET 10 Migration
 - [ ] Migrate solution to .NET 10.
 
+## Milestone 1.1 — Atlas undiscovered-region survey
+
+- [x] Capture galactic coordinates for star systems from journal StarPos.
+- [x] Identify and rank largely uncharted regions near the surveyed frontier.
+
+## Milestone 1.2 — Guided search (honk, FSS, DSS)
+
+- [x] Model a system survey pipeline: Unexplored → Honked → FssScanned.
+- [x] Import the system honk (`FSSDiscoveryScan`/`DiscoveryScan`) and its signal count.
+- [x] Guide the user in order: where to honk, then which systems to FSS, then which specific bodies to DSS.
+
+## Milestone 1.3 — Schema migrations
+
+- [x] Add EF Core migrations so schema changes no longer require regenerating the database.
+- [x] Apply migrations on app startup (replaces `EnsureCreated`).
+
 ## Next
 
-- [ ] Identify undiscovered regions via the Atlas boundary.
-- [ ] Introduce EF Core migrations so schema changes no longer require regenerating the database.
+- [ ] Expand the guided search experience (jump-plotting between honk targets, richer FSS/DSS details, filtering).
+- [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
 
 ## Quality
 

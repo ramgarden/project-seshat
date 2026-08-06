@@ -15,9 +15,9 @@ Project Seshat follows a small, dependency-directed architecture. `ProjectSeshat
 ## Responsibilities
 
 - **App** contains views, view models, and composition. It must not hold domain rules.
-- **Core** contains stable domain concepts and storage contracts shared by the solution. It currently models systems, commanders, and evidence without prescribing persistence.
-- **Feature projects** own their respective use cases and depend on Core rather than each other. Cross-feature collaboration should be defined through Core contracts when it becomes necessary.
-- **Data** is the persistence boundary. SQLite and Entity Framework Core can be introduced here without leaking persistence concerns into Core or the UI.
+- **Core** contains stable domain concepts and storage contracts shared by the solution: systems, celestial bodies, observations, codex, evidence, research threads, survey state, and galactic coordinates, without prescribing persistence.
+- **Feature projects** own their respective use cases and depend on Core rather than each other. Cross-feature collaboration is defined through Core contracts.
+- **Data** is the persistence boundary. SQLite and Entity Framework Core live here behind repository contracts; schema changes go through EF migrations, and the DbContext never leaks outside Data.
 - **Tests** verify behavior through public contracts.
 
-The first UI is intentionally a small XAML-based Avalonia dashboard with a view model. It establishes the MVVM direction without adding navigation infrastructure prematurely. The dashboard now reads from an EF Core + SQLite data layer for its live system, commander, and evidence counts, and the journals boundary can import a narrow slice of Elite Dangerous events into those repositories.
+The first UI is intentionally a small XAML-based Avalonia dashboard with a view model. It establishes the MVVM direction and grows into a left-sidebar navigation shell. The dashboard reads live system, commander, and evidence counts from an EF Core + SQLite data layer, the journals boundary imports a slice of Elite Dangerous events, and the Atlas boundary composes the guided honk → FSS → DSS search guide for the Atlas Survey page. Schema changes are applied via EF Core migrations on startup rather than `EnsureCreated`, so data survives schema updates.

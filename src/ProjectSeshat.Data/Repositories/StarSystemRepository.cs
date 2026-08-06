@@ -18,13 +18,19 @@ public sealed class StarSystemRepository : IStarSystemRepository
 
     public async ValueTask SaveAsync(StarSystem system, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.StarSystems.AnyAsync(x => x.Id == system.Id, cancellationToken);
-        if (!existing)
+        var tracked = _context.ChangeTracker.Entries<StarSystem>().FirstOrDefault(e => e.Entity.Id == system.Id);
+        var exists = tracked is not null || await _context.StarSystems.AnyAsync(x => x.Id == system.Id, cancellationToken);
+        if (!exists)
         {
             _context.StarSystems.Add(system);
         }
         else
         {
+            if (tracked is not null)
+            {
+                _context.Entry(tracked.Entity).State = EntityState.Detached;
+            }
+
             _context.StarSystems.Update(system);
         }
 
@@ -37,8 +43,25 @@ public sealed class StarSystemRepository : IStarSystemRepository
     public async Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default)
         => await _context.StarSystems.AnyAsync(system => system.Name == name, cancellationToken);
 
+    public async Task<StarSystem?> FindByNameAsync(string name, CancellationToken cancellationToken = default)
+        => await _context.StarSystems.FirstOrDefaultAsync(system => system.Name == name, cancellationToken);
+
     public async Task<IReadOnlyList<StarSystem>> ListAsync(int maxCount, CancellationToken cancellationToken = default)
         => await _context.StarSystems
+            .OrderBy(s => s.Name)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<StarSystem>> ListWithPositionAsync(int maxCount, CancellationToken cancellationToken = default)
+        => await _context.StarSystems
+            .Where(s => s.Position != null)
+            .OrderBy(s => s.Name)
+            .Take(maxCount)
+            .ToListAsync(cancellationToken);
+
+    public async Task<IReadOnlyList<StarSystem>> ListBySurveyStateAsync(SystemSurveyState state, int maxCount, CancellationToken cancellationToken = default)
+        => await _context.StarSystems
+            .Where(s => s.SurveyState == state)
             .OrderBy(s => s.Name)
             .Take(maxCount)
             .ToListAsync(cancellationToken);

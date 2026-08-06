@@ -1,7 +1,25 @@
 namespace ProjectSeshat.Core.Domain;
 
 /// <summary>Represents a known star system.</summary>
-public sealed record StarSystem(StarSystemId Id, string Name);
+public sealed record StarSystem(
+    StarSystemId Id,
+    string Name,
+    GalacticCoordinates? Position = null,
+    SystemSurveyState SurveyState = SystemSurveyState.Unexplored,
+    int NonBodySignals = 0);
+
+/// <summary>Classifies how far a star system's survey has progressed.</summary>
+public enum SystemSurveyState
+{
+    /// <summary>Arrived but not yet discovery-scanned (honk) — needs a honk.</summary>
+    Unexplored,
+
+    /// <summary>Discovery-scan (honk) done; census and signals known — may need FSS.</summary>
+    Honked,
+
+    /// <summary>Full Spectrum Scanner resolved the bodies and signals.</summary>
+    FssScanned
+}
 
 /// <summary>Represents a commander known to the research platform.</summary>
 public sealed record Commander(CommanderId Id, string Name);
@@ -26,6 +44,9 @@ public sealed record EvidenceRecord(
     ResearchThreadId? ThreadId = null);
 
 // ── Atlas ────────────────────────────────────────────────────────────────────
+
+/// <summary>Galactic position in light-years on the galaxy map.</summary>
+public sealed record GalacticCoordinates(double X, double Y, double Z);
 
 /// <summary>Classifies the broad type of a celestial body.</summary>
 public enum BodyKind
@@ -60,7 +81,8 @@ public sealed record CelestialBody(
     string? PlanetClass,
     bool? IsTerraformable,
     double? DistanceFromArrivalLs,
-    ScanStatus ScanStatus = ScanStatus.Discovered);
+    ScanStatus ScanStatus = ScanStatus.Discovered,
+    bool WorthDss = false);
 
 // ── Codex ────────────────────────────────────────────────────────────────────
 

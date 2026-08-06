@@ -155,6 +155,24 @@ public sealed class RepositoryTests
         Assert.Equal(evidence.Id, found[0].Id);
     }
 
+    [Fact]
+    public async Task StarSystemRepository_RoundTripsCoordinates()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var repository = new StarSystemRepository(context);
+        var system = new StarSystem(new StarSystemId(7), "Bubble 7", new GalacticCoordinates(-23.4, -72.4, -35.3));
+
+        await repository.SaveAsync(system);
+
+        var loaded = await repository.FindByIdAsync(system.Id);
+        Assert.NotNull(loaded);
+        Assert.Equal(system, loaded);
+        Assert.Single(await repository.ListWithPositionAsync(10));
+    }
+
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<ProjectSeshatDbContext>()

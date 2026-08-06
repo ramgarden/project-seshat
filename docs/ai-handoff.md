@@ -4,18 +4,33 @@ This document is the operational starting point for an AI coding agent continuin
 
 ## Purpose and current state
 
-Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 9 desktop application using Avalonia and MVVM.
+Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 9 desktop application using Avalonia and MVVM, backed by an EF Core + SQLite database.
 
-Milestone 0.2 delivered a visible dashboard. Milestone 0.3 provides the shared domain model and storage contracts. Milestone 0.4 implemented an EF Core + SQLite persistence boundary, and Milestone 0.5 adds a journal-importer slice that can persist basic commander, system, and scan-evidence events from Elite Dangerous journal text. Milestone 0.6 establishes sidebar navigation and splits the presentation into separate Dashboard and Exploration features.
+Milestones 0.2–0.9 built up the production features: a visible dashboard, the shared Core domain model, SQLite/EF Core persistence, journal ingestion, sidebar navigation, atlas/codex/observation data, research-thread workflows, and evidence capture/investigations. Milestone 1.0 added the Atlas undiscovered-region survey (galactic coordinates + region ranking), and Milestone 1.1 delivered **guided search**.
 
-The next planned product work is modeling atlas, codex, and observation data.
+The current product focus is **guided search**, embodied in the **Atlas Survey** page. It walks the user through the Elite Dangerous scan pipeline so they always know where to search next:
+
+1. **HONK** — systems you've reached but haven't discovery-scanned yet, ordered closest-first.
+2. **FSS** — systems the honk flagged with non-body signals, ordered by signal count (most interesting first), to resolve with the Full Spectrum Scanner.
+3. **DSS** — specific bodies that turned out worth Surface-mapping (terraformable or notable planet class), ordered by distance from the arrival point.
+
+### Survey pipeline model
+
+Each star system tracks how far its survey has progressed (`SystemSurveyState` in `ResearchRecords.cs`):
+
+- `Unexplored` — arrived but not yet honked; needs a honk.
+- `Honked` — discovery-scan/census done and the non-body signal count is known; may need FSS.
+- `FssScanned` — FSS resolved the bodies and signals.
+
+Bodies carry a `ScanStatus` (`Discovered → FssScanned → Mapped`) and a `WorthDss` flag; the DSS list is driven by bodies flagged worth mapping.
+
+The guide is driven by journal imports: coordinates come from `StarPos` on `FSDJump`, the system honk and signal count from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. `AtlasService.BuildSearchGuideAsync` composes the tiers; each tier's targets are exposed through `IStarSystemRepository` (`ListBySurveyStateAsync`) and `ICelestialBodyRepository` (`ListDssCandidatesAsync`).
 
 ## Quick start
 
 Run all commands from the repository root with the .NET 9 SDK installed:
 
 ```powershell
-dotnet restore ProjectSeshat.sln
 dotnet build ProjectSeshat.sln
 dotnet test ProjectSeshat.sln
 dotnet run --project src/ProjectSeshat.App
@@ -27,94 +42,96 @@ Before changing anything, run `git status --short`: work may be intentionally un
 
 | Project | Responsibility | Current state |
 | --- | --- | --- |
-| `ProjectSeshat.App` | Avalonia desktop UI and presentation composition | Dashboard and Exploration views are implemented with a left-sidebar navigation shell. |
-| `ProjectSeshat.Core` | Stable domain model and contracts | Systems, commanders, evidence, and repository abstractions are implemented. |
-| `ProjectSeshat.Data` | Persistence boundary | Placeholder only; SQLite/EF Core is the next planned implementation. |
-| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Placeholder only. |
-| `ProjectSeshat.Atlas` | Spatial and astronomical research | Placeholder only. |
-| `ProjectSeshat.ThreadEngine` | Research-thread workflows | Placeholder only. |
-| `ProjectSeshat.Codex` | Discovery and codex knowledge | Placeholder only. |
-| `ProjectSeshat.Observatory` | Observation analysis | Placeholder only. |
-| `ProjectSeshat.Investigations` | Evidence-based investigations | Placeholder only. |
-| `ProjectSeshat.Tests` | Unit and integration tests | Tests Core records and the SQLite repository round trip. |
+| `ProjectSeshat.App` | Avalonia desktop UI, view models, and composition | Dashboard, Exploration, Research Threads, and Atlas Survey views in a left-sidebar navigation shell. |
+| `ProjectSeshat.Core` | Stable domain model and contracts | Systems, bodies, evidence, threads, observations, codex, survey state, and repository abstractions are implemented. |
+| `ProjectSeshat.Data` | Persistence boundary (SQLite/EF Core) | DbContext, repositories, and EF migrations implemented. Database lives in user AppData. |
+| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Imports commander identity, jumps (+ StarPos), scans, and the system honk; deduped by content fingerprint. |
+| `ProjectSeshat.Atlas` | Spatial and astronomical research | Coordinates survey, region ranking, and the guided honk/FSS/DSS search guide (`AtlasService`). |
+| `ProjectSeshat.ThreadEngine` | Research-thread workflows | `ResearchThreadEngine` implemented. |
+| `ProjectSeshat.Codex` | Discovery and codex knowledge | Codex entries modeled and persisted. |
+| `ProjectSeshat.Observatory` | Observation analysis | Observations modeled and persisted. |
+| `ProjectSeshat.Investigations` | Evidence-based investigations | `InvestigationService` captures evidence attached to research threads. |
+| `ProjectSeshat.Tests` | Unit and integration tests | Core records, SQLite repository round trips, journal reader, and Atlas search guide. |
 
 ## Architectural rules
 
 - Keep `ProjectSeshat.Core` free of Avalonia, EF Core, SQLite, and file-system dependencies.
 - Put domain records, IDs, enums, and contracts in Core.
 - Put EF entities, `DbContext`, and repository implementations in Data. Do not expose EF entities outside Data.
-- The App project owns Avalonia views, view models, presentation composition, and later dependency injection setup. Do not place domain rules in view models or code-behind.
-- Feature projects depend on Core. Introduce cross-feature collaboration through Core contracts rather than direct feature-project references unless the architecture is deliberately revised.
-- Keep additions narrow. Database migrations, journal parsing, navigation, and application startup composition are separate pending work items.
+- The App project owns Avalonia views, view models, presentation composition, and startup composition. Do not place domain rules in view models or code-behind.
+- Feature projects depend only on Core. Introduce cross-feature collaboration through Core contracts rather than direct feature-project references.
+- Schema changes go through EF Core migrations (see below), never `EnsureCreated`.
 
 ## Implemented domain model
 
-The Core API is located under `src/ProjectSeshat.Core`.
+The Core API is located under `src/ProjectSeshat.Core/Domain` and `src/ProjectSeshat.Core/Contracts`:
 
-- `Domain/Identifiers.cs`
-  - `StarSystemId(long Value)`
-  - `CommanderId(Guid Value)`
-  - `EvidenceId(Guid Value)`
-- `Domain/ResearchRecords.cs`
-  - `StarSystem(StarSystemId Id, string Name)`
-  - `Commander(CommanderId Id, string Name)`
-  - `EvidenceRecord(EvidenceId Id, EvidenceKind Kind, string Summary, DateTimeOffset RecordedAt)`
-  - `EvidenceKind`: `Observation`, `Discovery`, `Investigation`
-- `Contracts/`
-  - `IStarSystemRepository`
-  - `ICommanderRepository`
-  - `IEvidenceRepository`
+- `Identifiers.cs` — `StarSystemId(long)`, `CommanderId`, `EvidenceId`, `CelestialBodyId`, `CodexEntryId`, `ObservationGuid`, `ResearchThreadId`.
+- `ResearchRecords.cs` — `StarSystem` (with `Position`, `SurveyState`, `NonBodySignals`), `Commander`, `JournalImportKey`, `EvidenceRecord`/`EvidenceKind`, plus Atlas records `GalacticCoordinates`, `BodyKind`, `ScanStatus`, `CelestialBody`, and codex/observatory records.
+- `Threads.cs` — research thread records.
+- `JournalImportTracker.cs` — import de-duplication by content fingerprint.
+- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`.
 
-Each repository contract currently defines `FindByIdAsync` and `SaveAsync`, accepts a `CancellationToken`, and uses `ValueTask`. Any persistence implementation must follow these public contracts.
+Repository contracts accept a `CancellationToken`; persistence implementations must follow these public contracts.
 
-## Data layer status
+## Atlas / guided search
 
-`ProjectSeshat.Data` is implemented using SQLite and EF Core. It defines the EF entities, database context, and implements the three repository contracts defined in Core.
+`src/ProjectSeshat.Atlas/AtlasService.cs` exposes:
+
+- `GetBodiesForSystemAsync` — catalogued bodies ordered by distance from arrival.
+- `GetSurveySnapshotAsync` — a spatial snapshot (reference coordinates, surveyed systems, surveyed cells).
+- `RankUndiscoveredRegionsAsync` — ranks largely uncharted cells near the surveyed frontier (Milestone 1.0).
+- `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Atlas Survey page (Milestone 1.1).
+
+Presentation lives in `src/ProjectSeshat.App/ViewModels/AtlasViewModel.cs` (`HonkItems`, `FssItems`, `DssItems`, selection detail) and `Views/AtlasView.axaml`. `MainWindowViewModel` wires the `Atlas` page into navigation and refreshes it whenever journal data is imported.
 
 ## Desktop application
 
-The first-light UI lives in `src/ProjectSeshat.App`.
+The UI lives in `src/ProjectSeshat.App`.
 
-- `App.axaml` defines application resources and the Fluent theme. It must remain present because `App.Initialize()` loads it.
-- `MainWindow.axaml` is the dark sci-fi dashboard.
-- `MainWindow.axaml.cs` only loads XAML and assigns `MainWindowViewModel` as the data context.
-- `ViewModels/MainWindowViewModel.cs` supplies all visible text and statistic values through bindings.
+- `App.axaml` defines application resources and the Fluent theme; it must remain present.
+- `App.cs` composes the service graph and resolves the database path under the user's AppData; it now applies EF migrations instead of `EnsureCreated`.
+- `MainWindow.axaml` is the dark sci-fi dashboard with the left sidebar.
+- `ViewModels/` supply all visible text and values through bindings.
 
 Preserve these UI conventions:
 
 - Displayed labels and values belong in the view model; do not hardcode user-facing text in `MainWindow.axaml`.
 - Keep code-behind free of application logic.
 - Retain the title `Project Seshat - Galactic Research Platform` unless product direction changes it.
-- The current dashboard’s zeros are intentional placeholders until a defined application service and database composition path exist.
+
+## Data layer and migrations
+
+`ProjectSeshat.Data` implements the repositories over SQLite/EF Core. The DbContext is `ProjectSeshatDbContext`; migrations live in `src/ProjectSeshat.Data/Migrations`.
+
+The application now uses `context.Database.Migrate()` on startup so schema changes apply without regenerating the database or re-importing journals. To add a migration after a schema change:
+
+```powershell
+dotnet ef migrations add <Name> --project src/ProjectSeshat.Data
+```
+
+A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build the context outside the running app.
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests`.
-
-- `ArchitectureTests.cs` confirms Core is available.
-- `Domain/ResearchRecordTests.cs` verifies domain records retain their data.
-
-When the Data layer is implemented, add repository integration tests. Prefer an in-memory SQLite connection over EF Core’s non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (37 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
 - Target framework: `net9.0`
 - Nullable reference types and implicit usings: enabled in `Directory.Build.props`
 - Package versions: managed centrally in `Directory.Packages.props`
-- UI: Avalonia `11.2.3`
+- UI: Avalonia `11.2.3`; Data: EF Core / SQLite `9.0.8` (includes `Microsoft.EntityFrameworkCore.Design` for migrations)
 - Testing: xUnit
 
 Do not add a package version directly to a `.csproj`; add it to `Directory.Packages.props` and reference the package without a version in the consuming project.
 
 ## Recommended next work
 
-Follow the roadmap order:
+Follow the `Next` section in [roadmap.md](roadmap.md). Current candidate next steps:
 
-1. Model atlas, codex, and observation data in `ProjectSeshat.Atlas` and `ProjectSeshat.Codex`.
-2. Build research-thread workflows.
-3. Support evidence capture and investigations.
-
-Operational follow-up (not a feature milestone): the app currently uses `EnsureCreated()`, so every schema change requires regenerating the SQLite database and re-importing journals. Add EF Core migrations to `ProjectSeshat.Data` so future schema changes apply without data loss.
+- Expand the guided search experience (e.g., jump-plotting between honk targets, richer FSS/DSS details, filtering).
+- Expand unit/integration test coverage and add CI/formatting (Quality section).
 
 ## Documentation maintenance
 
@@ -125,4 +142,4 @@ Keep these documents current when changing the architecture or milestone state:
 - [roadmap.md](roadmap.md) — completed and upcoming milestones.
 - This handoff document — operational details that help an agent resume safely.
 
-The README correctly describes SQLite/EF Core as future work. Update it when the Data milestone is implemented.
+Update this handoff and `roadmap.md` whenever you move a milestone so the next agent can resume instantly.

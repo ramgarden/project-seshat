@@ -175,8 +175,40 @@ public sealed class JournalReader
             }
 
             var systemId = new StarSystemId(Math.Abs(systemNameValue.GetHashCode()));
-            var system = new StarSystem(systemId, systemNameValue);
+            var position = payload.TryGetValue("StarPos", out var starPos) && starPos.ValueKind == JsonValueKind.Array && starPos.GetArrayLength() >= 3
+                ? new GalacticCoordinates(starPos[0].GetDouble(), starPos[1].GetDouble(), starPos[2].GetDouble())
+                : null;
+            var system = new StarSystem(systemId, systemNameValue, position);
             await starSystemRepository.SaveAsync(system, cancellationToken);
+            return;
+        }
+
+        if ((eventType == "FSSDiscoveryScan" || eventType == "DiscoveryScan") &&
+            payload.TryGetValue("StarSystem", out var honkSystem))
+        {
+            var systemNameValue = honkSystem.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(systemNameValue))
+            {
+                return;
+            }
+
+            var existing = await starSystemRepository.FindByNameAsync(systemNameValue, cancellationToken);
+            if (existing is null)
+            {
+                return;
+            }
+
+            var nonBodySignals = 0;
+            if (payload.TryGetValue("NonBodyCount", out var nonBodyCount) && nonBodyCount.ValueKind == JsonValueKind.Number)
+            {
+                nonBodySignals = nonBodyCount.GetInt32();
+            }
+
+            await starSystemRepository.SaveAsync(existing with
+            {
+                SurveyState = SystemSurveyState.Honked,
+                NonBodySignals = nonBodySignals
+            }, cancellationToken);
             return;
         }
 
@@ -229,8 +261,11 @@ public sealed class JournalReader
                         planetClass,
                         isTerraformable,
                         distanceLs,
-                        ScanStatus.FssScanned);
+                        ScanStatus.FssScanned,
+                        IsWorthDss(planetClass, isTerraformable));
                     await celestialBodyRepository.SaveAsync(body, cancellationToken);
+
+                    await MarkSystemFssScannedAsync(starSystemRepository, bodyNameValue, cancellationToken);
                 }
             }
 
@@ -305,6 +340,36 @@ public sealed class JournalReader
                 DateTimeOffset.UtcNow);
             await evidenceRepository.SaveAsync(evidence, cancellationToken);
         }
+    }
+
+    private static async Task MarkSystemFssScannedAsync(
+        IStarSystemRepository starSystemRepository,
+        string bodyName,
+        CancellationToken cancellationToken)
+    {
+        var systemName = DeriveSystemNameFromBodyName(bodyName);
+        var system = await starSystemRepository.FindByNameAsync(systemName, cancellationToken);
+        if (system is not null && system.SurveyState != SystemSurveyState.FssScanned)
+        {
+            await starSystemRepository.SaveAsync(system with { SurveyState = SystemSurveyState.FssScanned }, cancellationToken);
+        }
+    }
+
+    private static string DeriveSystemNameFromBodyName(string bodyName)
+    {
+        var parts = bodyName.Split(' ');
+        return parts.Length > 1 ? string.Join(' ', parts[..^1]) : bodyName;
+    }
+
+    /// <summary>Bodies that are conventionally worthwhile to Surface-map with DSS.</summary>
+    private static bool IsWorthDss(string? planetClass, bool? terraformable)
+    {
+        if (terraformable == true)
+        {
+            return true;
+        }
+
+        return planetClass is "Earthlike body" or "Water world" or "Ammonia world" or "High metal content body";
     }
 
     private static BodyKind DetermineBodyKind(Dictionary<string, JsonElement> payload)

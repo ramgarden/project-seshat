@@ -13,5 +13,11 @@ public interface IStarSystemRepository
 
     Task<bool> ExistsByNameAsync(string name, CancellationToken cancellationToken = default);
 
+    Task<StarSystem?> FindByNameAsync(string name, CancellationToken cancellationToken = default);
+
     Task<IReadOnlyList<StarSystem>> ListAsync(int maxCount, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<StarSystem>> ListWithPositionAsync(int maxCount, CancellationToken cancellationToken = default);
+
+    Task<IReadOnlyList<StarSystem>> ListBySurveyStateAsync(SystemSurveyState state, int maxCount, CancellationToken cancellationToken = default);
 }

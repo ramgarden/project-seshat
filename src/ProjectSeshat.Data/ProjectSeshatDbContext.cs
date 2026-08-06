@@ -1,10 +1,15 @@
 using Microsoft.EntityFrameworkCore;
+using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectSeshat.Core.Domain;
 
 namespace ProjectSeshat.Data;
 
 public sealed class ProjectSeshatDbContext : DbContext
 {
+    private static readonly ValueConverter<GalacticCoordinates?, string?> PositionConverter = new(
+        position => position == null ? null : ToPositionString(position),
+        value => value == null ? null : ParseCoordinates(value));
+
     public ProjectSeshatDbContext(DbContextOptions<ProjectSeshatDbContext> options)
         : base(options)
     {
@@ -35,6 +40,9 @@ public sealed class ProjectSeshatDbContext : DbContext
                 id => id.Value,
                 value => new StarSystemId(value));
             entity.Property(x => x.Name).IsRequired();
+            entity.Property(x => x.Position).HasColumnType("TEXT").HasConversion(PositionConverter);
+            entity.Property(x => x.SurveyState).HasConversion<string>();
+            entity.Property(x => x.NonBodySignals);
         });
 
         modelBuilder.Entity<Commander>(entity =>
@@ -81,6 +89,7 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Name).IsRequired();
             entity.Property(x => x.Kind).HasConversion<string>();
             entity.Property(x => x.ScanStatus).HasConversion<string>();
+            entity.Property(x => x.WorthDss);
         });
 
         modelBuilder.Entity<CodexEntry>(entity =>
@@ -127,5 +136,22 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Status).HasConversion<string>();
             entity.Property(x => x.CreatedAt).IsRequired();
         });
+    }
+
+    private static string? ToPositionString(GalacticCoordinates? position)
+        => position is null ? null : $"{position.X};{position.Y};{position.Z}";
+
+    private static GalacticCoordinates? ParseCoordinates(string value)
+    {
+        var parts = value.Split(';');
+        if (parts.Length != 3 ||
+            !double.TryParse(parts[0], out var x) ||
+            !double.TryParse(parts[1], out var y) ||
+            !double.TryParse(parts[2], out var z))
+        {
+            return null;
+        }
+
+        return new GalacticCoordinates(x, y, z);
     }
 }
