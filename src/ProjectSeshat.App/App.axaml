@@ -10,6 +10,12 @@
     <DataTemplate DataType="{x:Type vm:ExplorationViewModel}">
       <views:ExplorationView />
     </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:ThreadsViewModel}">
+      <views:ThreadsView />
+    </DataTemplate>
+    <DataTemplate DataType="{x:Type vm:AtlasViewModel}">
+      <views:AtlasView />
+    </DataTemplate>
   </Application.DataTemplates>
 
   <Application.Styles>

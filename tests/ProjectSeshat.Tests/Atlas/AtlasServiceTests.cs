@@ -91,6 +91,64 @@ public sealed class AtlasServiceTests
         Assert.Contains("Earthlike", dss.Reason);
     }
 
+    [Fact]
+    public async Task SearchGuide_PlotsHonkRouteFromCurrentPosition()
+    {
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        var near = new StarSystem(new StarSystemId(2), "NEAR", new GalacticCoordinates(0, 0, 100), SystemSurveyState.Unexplored);
+        var far = new StarSystem(new StarSystemId(3), "FAR", new GalacticCoordinates(0, 0, 1000), SystemSurveyState.Unexplored);
+        var systems = new InMemorySystemRepository();
+        systems.Add(here);
+        systems.Add(near);
+        systems.Add(far);
+
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var guide = await atlas.BuildSearchGuideAsync(systems, new InMemoryBodyRepository(), nav);
+
+        Assert.Equal("HERE", guide.CurrentSystemName);
+        Assert.Equal(2, guide.NeedHonk.Count);
+        // Nearest unexplored system to the commander is plotted first.
+        Assert.Equal("NEAR", guide.NeedHonk[0].SystemName);
+        Assert.Equal("FAR", guide.NeedHonk[1].SystemName);
+        Assert.True(guide.NeedHonk[0].DistanceLy < guide.NeedHonk[1].DistanceLy);
+    }
+
+    [Fact]
+    public async Task SearchGuide_WithoutNavigation_FallsBackToCentroid()
+    {
+        var systems = new InMemorySystemRepository();
+        systems.Add(new StarSystem(new StarSystemId(1), "LEFT", new GalacticCoordinates(-1000, 0, 0), SystemSurveyState.Unexplored));
+        systems.Add(new StarSystem(new StarSystemId(2), "RIGHT", new GalacticCoordinates(1000, 0, 0), SystemSurveyState.Unexplored));
+
+        var atlas = new AtlasService();
+        var guide = await atlas.BuildSearchGuideAsync(systems, new InMemoryBodyRepository(), null);
+
+        Assert.Null(guide.CurrentSystemName);
+        Assert.Equal(2, guide.NeedHonk.Count);
+    }
+
+    private sealed class InMemoryNavigationStateRepository : INavigationStateRepository
+    {
+        private NavigationState? _state;
+
+        public InMemoryNavigationStateRepository(NavigationState? state = null)
+        {
+            _state = state;
+        }
+
+        public Task<NavigationState?> GetAsync(CancellationToken cancellationToken = default)
+            => Task.FromResult(_state);
+
+        public ValueTask SaveAsync(NavigationState state, CancellationToken cancellationToken = default)
+        {
+            _state = state;
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class InMemoryBodyRepository : ICelestialBodyRepository
     {
         private readonly List<CelestialBody> _bodies = new();

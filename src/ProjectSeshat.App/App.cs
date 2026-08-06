@@ -52,13 +52,14 @@ public sealed class App : Application
         var celestialBodyRepository = new CelestialBodyRepository(context);
         var codexEntryRepository = new CodexEntryRepository(context);
         var observationRepository = new ObservationRepository(context);
+        var navigationRepository = new NavigationStateRepository(context);
         var researchThreadRepository = new ResearchThreadRepository(context);
         var researchThreadEngine = new ResearchThreadEngine(researchThreadRepository);
         var investigationService = new InvestigationService(evidenceRepository, researchThreadRepository);
         var atlasService = new AtlasService();
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
-        var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository);
+        var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository, navigationRepository);
 
         var viewModel = new MainWindowViewModel(
             starSystemRepository,
@@ -68,6 +69,7 @@ public sealed class App : Application
             celestialBodyRepository,
             codexEntryRepository,
             observationRepository,
+            navigationRepository,
             researchThreadEngine,
             investigationService,
             atlasService,
@@ -84,7 +86,8 @@ public sealed class App : Application
         IEvidenceRepository evidenceRepository,
         IJournalImportTrackerRepository importTrackerRepository,
         ICelestialBodyRepository? celestialBodyRepository,
-        ICodexEntryRepository? codexEntryRepository)
+        ICodexEntryRepository? codexEntryRepository,
+        INavigationStateRepository navigationRepository)
     {
         var resolvedPath = pathResolver.ResolvePath();
         if (resolvedPath is null)
@@ -100,7 +103,8 @@ public sealed class App : Application
             evidenceRepository,
             importTrackerRepository,
             celestialBodyRepository,
-            codexEntryRepository);
+            codexEntryRepository,
+            navigationRepository);
     }
 
     public static MainWindow CreateMainWindow()

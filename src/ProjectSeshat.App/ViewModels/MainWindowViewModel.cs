@@ -26,6 +26,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
+        INavigationStateRepository? navigationRepository = null,
         ResearchThreadEngine? researchThreadEngine = null,
         InvestigationService? investigationService = null,
         AtlasService? atlasService = null,
@@ -47,7 +48,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
-        Atlas = new AtlasViewModel(atlasService, starSystemRepository, celestialBodyRepository);
+        Atlas = new AtlasViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
 
         _journalWatcher = journalWatcher;
         if (_journalWatcher is not null)

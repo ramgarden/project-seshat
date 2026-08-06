@@ -20,3 +20,6 @@ public readonly record struct ObservationGuid(Guid Value);
 
 /// <summary>Identifies a research thread in the ThreadEngine.</summary>
 public readonly record struct ResearchThreadId(Guid Value);
+
+/// <summary>Identifies the commander's persisted navigation state.</summary>
+public readonly record struct NavigationStateId(Guid Value);

@@ -26,6 +26,16 @@ Bodies carry a `ScanStatus` (`Discovered → FssScanned → Mapped`) and a `Wort
 
 The guide is driven by journal imports: coordinates come from `StarPos` on `FSDJump`, the system honk and signal count from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. `AtlasService.BuildSearchGuideAsync` composes the tiers; each tier's targets are exposed through `IStarSystemRepository` (`ListBySurveyStateAsync`) and `ICelestialBodyRepository` (`ListDssCandidatesAsync`).
 
+### Jump-plotting
+
+The guide is anchored to the commander's real position. `JournalReader` records the latest `FSDJump`/`Location` into a persisted `NavigationState` (single row, `INavigationStateRepository`; EF table `NavigationStates`, added via the `AddNavigationState` migration). `AtlasService.BuildSearchGuideAsync` uses that current position as the reference:
+
+- The **honk list is the jump plot**: unexplored systems are ordered nearest-first from where the commander is now, so it reads as "jump here next, then here, then here."
+- FSS targets are ranked by signal count then distance from the current position; DSS bodies stay ordered by distance from their arrival point.
+- When no position is known yet, it falls back to the centroid of all surveyed systems.
+
+`AtlasViewModel` surfaces `CurrentSystemText`, the ordered honk route (step-numbered), and a dedicated `NextJumpTitle` / `NextJumpDetail` focus card in `AtlasView.axaml`.
+
 ## Quick start
 
 Run all commands from the repository root with the .NET 9 SDK installed:
@@ -69,8 +79,9 @@ The Core API is located under `src/ProjectSeshat.Core/Domain` and `src/ProjectSe
 - `Identifiers.cs` — `StarSystemId(long)`, `CommanderId`, `EvidenceId`, `CelestialBodyId`, `CodexEntryId`, `ObservationGuid`, `ResearchThreadId`.
 - `ResearchRecords.cs` — `StarSystem` (with `Position`, `SurveyState`, `NonBodySignals`), `Commander`, `JournalImportKey`, `EvidenceRecord`/`EvidenceKind`, plus Atlas records `GalacticCoordinates`, `BodyKind`, `ScanStatus`, `CelestialBody`, and codex/observatory records.
 - `Threads.cs` — research thread records.
+- `NavigationState.cs` — the commander's current system (for jump-plotting).
 - `JournalImportTracker.cs` — import de-duplication by content fingerprint.
-- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`.
+- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`.
 
 Repository contracts accept a `CancellationToken`; persistence implementations must follow these public contracts.
 
@@ -142,8 +153,8 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 Follow the `Next` section in [roadmap.md](roadmap.md). Current candidate next steps:
 
-- Expand the guided search experience (jump-plotting between honk targets, richer FSS/DSS details, filtering).
 - Add a sky-map / region visualization to help spot structures for the Raxxla hunt.
+- Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).
 
 ## Documentation maintenance

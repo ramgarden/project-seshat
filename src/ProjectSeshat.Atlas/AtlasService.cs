@@ -23,7 +23,9 @@ public sealed record SearchGuide(
     IReadOnlyList<DssTarget> NeedDss,
     int HonkCount,
     int FssCount,
-    int DssCount);
+    int DssCount,
+    string? CurrentSystemName = null,
+    GalacticCoordinates? CurrentPosition = null);
 
 /// <summary>A system the user should discovery-scan (honk) first.</summary>
 public sealed record HonkTarget(string SystemName, double? DistanceLy);
@@ -136,16 +138,38 @@ public sealed class AtlasService
     public async Task<SearchGuide> BuildSearchGuideAsync(
         IStarSystemRepository systemRepository,
         ICelestialBodyRepository bodyRepository,
+        INavigationStateRepository? navigationRepository = null,
         CancellationToken cancellationToken = default)
     {
         var allSystems = await systemRepository.ListAsync(100000, cancellationToken);
         var positioned = allSystems.Where(s => s.Position is not null).Select(s => s.Position!).Cast<GalacticCoordinates>().ToList();
-        var reference = positioned.Count > 0
+
+        // Anchor the plot to the commander's current position when known, otherwise fall back
+        // to the centroid of everything already surveyed.
+        string? currentSystemName = null;
+        GalacticCoordinates? currentPosition = null;
+        if (navigationRepository is not null)
+        {
+            var state = await navigationRepository.GetAsync(cancellationToken);
+            if (state?.CurrentSystemId is { } currentSystemId)
+            {
+                var currentSystem = await systemRepository.FindByIdAsync(currentSystemId, cancellationToken);
+                if (currentSystem?.Position is not null)
+                {
+                    currentSystemName = currentSystem.Name;
+                    currentPosition = currentSystem.Position;
+                }
+            }
+        }
+
+        var reference = currentPosition ?? (positioned.Count > 0
             ? Centroid(positioned)
-            : new GalacticCoordinates(0, 0, 0);
+            : new GalacticCoordinates(0, 0, 0));
 
         double? DistanceFrom(StarSystem s) => s.Position is null ? null : Distance(s.Position, reference);
 
+        // Honk targets are ordered nearest-first from the current position: this ordered list is
+        // the jump plot the user follows next.
         var honkSystems = await systemRepository.ListBySurveyStateAsync(SystemSurveyState.Unexplored, 200, cancellationToken);
         var honk = honkSystems
             .Select(s => new HonkTarget(s.Name, DistanceFrom(s)))
@@ -169,7 +193,7 @@ public sealed class AtlasService
                 DssReason(b)))
             .ToList();
 
-        return new SearchGuide(honk, fss, dss, honk.Count, fss.Count, dss.Count);
+        return new SearchGuide(honk, fss, dss, honk.Count, fss.Count, dss.Count, currentSystemName, currentPosition);
     }
 
     private static string DssReason(CelestialBody body)

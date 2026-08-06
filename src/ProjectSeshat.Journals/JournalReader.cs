@@ -17,7 +17,8 @@ public sealed class JournalReader
         CancellationToken cancellationToken = default,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
-        string? contentFingerprint = null)
+        string? contentFingerprint = null,
+        INavigationStateRepository? navigationRepository = null)
     {
         if (importTrackerRepository is not null)
         {
@@ -58,6 +59,7 @@ public sealed class JournalReader
                 evidenceRepository,
                 celestialBodyRepository,
                 codexEntryRepository,
+                navigationRepository,
                 cancellationToken);
         }
 
@@ -135,6 +137,7 @@ public sealed class JournalReader
         IEvidenceRepository evidenceRepository,
         ICelestialBodyRepository? celestialBodyRepository,
         ICodexEntryRepository? codexEntryRepository,
+        INavigationStateRepository? navigationRepository,
         CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(line);
@@ -171,6 +174,7 @@ public sealed class JournalReader
             var exists = await starSystemRepository.ExistsByNameAsync(systemNameValue, cancellationToken);
             if (exists)
             {
+                await UpdateNavigationAsync(navigationRepository, starSystemRepository, systemNameValue, cancellationToken);
                 return;
             }
 
@@ -180,6 +184,8 @@ public sealed class JournalReader
                 : null;
             var system = new StarSystem(systemId, systemNameValue, position);
             await starSystemRepository.SaveAsync(system, cancellationToken);
+
+            await UpdateNavigationAsync(navigationRepository, starSystemRepository, systemNameValue, cancellationToken);
             return;
         }
 
@@ -355,20 +361,49 @@ public sealed class JournalReader
 
         if (eventType == "Location" && payload.TryGetValue("StarSystem", out var locationSystem))
         {
-            var summary = $"Visited {locationSystem.GetString()}";
+            var locationSystemName = locationSystem.GetString() ?? string.Empty;
+            var summary = $"Visited {locationSystemName}";
             var exists = await evidenceRepository.ExistsBySummaryAsync(summary, cancellationToken);
-            if (exists)
+            if (!exists)
             {
-                return;
+                var evidence = new EvidenceRecord(
+                    new EvidenceId(Guid.NewGuid()),
+                    EvidenceKind.Observation,
+                    summary,
+                    DateTimeOffset.UtcNow);
+                await evidenceRepository.SaveAsync(evidence, cancellationToken);
             }
 
-            var evidence = new EvidenceRecord(
-                new EvidenceId(Guid.NewGuid()),
-                EvidenceKind.Observation,
-                summary,
-                DateTimeOffset.UtcNow);
-            await evidenceRepository.SaveAsync(evidence, cancellationToken);
+            if (!string.IsNullOrWhiteSpace(locationSystemName))
+            {
+                await UpdateNavigationAsync(navigationRepository, starSystemRepository, locationSystemName, cancellationToken);
+            }
         }
+    }
+
+    private static async Task UpdateNavigationAsync(
+        INavigationStateRepository? navigationRepository,
+        IStarSystemRepository starSystemRepository,
+        string systemName,
+        CancellationToken cancellationToken)
+    {
+        if (navigationRepository is null || string.IsNullOrWhiteSpace(systemName))
+        {
+            return;
+        }
+
+        var system = await starSystemRepository.FindByNameAsync(systemName, cancellationToken);
+        if (system is null)
+        {
+            return;
+        }
+
+        var state = await navigationRepository.GetAsync(cancellationToken);
+        var updated = state is null
+            ? new NavigationState(new NavigationStateId(Guid.NewGuid()), system.Id, DateTimeOffset.UtcNow)
+            : state with { CurrentSystemId = system.Id, LastUpdatedAt = DateTimeOffset.UtcNow };
+
+        await navigationRepository.SaveAsync(updated, cancellationToken);
     }
 
     /// <summary>

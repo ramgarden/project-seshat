@@ -22,6 +22,7 @@ public sealed class JournalWatcher : IDisposable
     private readonly IJournalImportTrackerRepository? _importTrackerRepository;
     private readonly ICelestialBodyRepository? _celestialBodyRepository;
     private readonly ICodexEntryRepository? _codexEntryRepository;
+    private readonly INavigationStateRepository? _navigationRepository;
     private readonly Dictionary<string, long> _offsets = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _fullyImported = new(StringComparer.OrdinalIgnoreCase);
     private readonly SemaphoreSlim _gate = new(1, 1);
@@ -43,7 +44,8 @@ public sealed class JournalWatcher : IDisposable
         IEvidenceRepository evidenceRepository,
         IJournalImportTrackerRepository? importTrackerRepository = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
-        ICodexEntryRepository? codexEntryRepository = null)
+        ICodexEntryRepository? codexEntryRepository = null,
+        INavigationStateRepository? navigationRepository = null)
     {
         if (string.IsNullOrWhiteSpace(directory))
         {
@@ -58,6 +60,7 @@ public sealed class JournalWatcher : IDisposable
         _importTrackerRepository = importTrackerRepository;
         _celestialBodyRepository = celestialBodyRepository;
         _codexEntryRepository = codexEntryRepository;
+        _navigationRepository = navigationRepository;
     }
 
     /// <summary>Begins watching and runs an initial scan so existing journals are imported immediately.</summary>
@@ -164,6 +167,7 @@ public sealed class JournalWatcher : IDisposable
             _evidenceRepository,
             celestialBodyRepository: _celestialBodyRepository,
             codexEntryRepository: _codexEntryRepository,
+            navigationRepository: _navigationRepository,
             cancellationToken: cancellationToken);
 
         return new JournalScanResult(1, lines.Count);
@@ -235,7 +239,8 @@ public sealed class JournalWatcher : IDisposable
             cancellationToken: cancellationToken,
             celestialBodyRepository: _celestialBodyRepository,
             codexEntryRepository: _codexEntryRepository,
-            contentFingerprint: fingerprint);
+            contentFingerprint: fingerprint,
+            navigationRepository: _navigationRepository);
 
         lock (_offsets)
         {

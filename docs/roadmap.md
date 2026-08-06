@@ -67,11 +67,17 @@
 - [x] Start watching automatically on app launch; remove the manual "Load journal files" and "Rescan" buttons.
 - [x] Deduplicate already-loaded journal content (content fingerprint + file path) so restarts never double-import.
 
+## Milestone 1.4 — Jump-plotting
+
+- [x] Track the commander's current system from the latest `FSDJump`/`Location` journal event (persisted).
+- [x] Order the honk/FSS/DSS search guide by distance from the commander's current position.
+- [x] Present an ordered jump route (nearest-first honk list) plus an explicit "next jump" target in the Atlas Survey UI.
+
 ## Next
 
-- [ ] Expand the guided search experience (jump-plotting between honk targets, richer FSS/DSS details, filtering).
 - [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
 - [ ] Sky-map / region visualization for the Raxxla hunt.
+- [ ] Richer FSS/DSS detail and filtering on the guided search.
 
 ## Quality
 

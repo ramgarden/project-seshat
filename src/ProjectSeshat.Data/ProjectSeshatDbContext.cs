@@ -31,6 +31,8 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<ResearchThread> ResearchThreads => Set<ResearchThread>();
 
+    public DbSet<NavigationState> NavigationStates => Set<NavigationState>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StarSystem>(entity =>
@@ -135,6 +137,21 @@ public sealed class ProjectSeshatDbContext : DbContext
                 value => value.HasValue ? new CelestialBodyId(value.Value) : (CelestialBodyId?)null);
             entity.Property(x => x.Status).HasConversion<string>();
             entity.Property(x => x.CreatedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<NavigationState>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new NavigationStateId(value));
+            entity.Property(x => x.CurrentSystemId).HasConversion(
+                id => id.HasValue ? id.Value.Value : (long?)null,
+                value => value.HasValue ? new StarSystemId(value.Value) : (StarSystemId?)null);
+            entity.Property(x => x.LastUpdatedAt).IsRequired();
+
+            // Only one navigation state row at a time.
+            entity.HasIndex(x => x.Id).IsUnique();
         });
     }
 
