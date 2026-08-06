@@ -3,9 +3,9 @@ using Avalonia.Markup.Xaml;
 
 namespace ProjectSeshat.App.Views;
 
-public partial class AtlasView : UserControl
+public partial class SearchGuideView : UserControl
 {
-    public AtlasView()
+    public SearchGuideView()
     {
         InitializeComponent();
     }

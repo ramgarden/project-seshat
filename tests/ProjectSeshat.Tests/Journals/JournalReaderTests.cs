@@ -310,6 +310,33 @@ public sealed class JournalReaderTests
         Assert.Equal("LHS 3447", current!.Name);
     }
 
+    [Fact]
+    public async Task ImportAsync_CapturesSignalTypesFromFssSignalsFound()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var reader = new JournalReader();
+
+        using var journal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447"}
+{"timestamp":"2024-01-01T00:00:02Z","event":"FSSDiscoveryScan","StarSystem":"LHS 3447","BodyCount":5,"NonBodyCount":2}
+{"timestamp":"2024-01-01T00:00:03Z","event":"FSSSignalsFound","SystemName":"LHS 3447","Signals":[{"Type":"$SAA_SignalType_Biological;","Type_Localised":"Biological"},{"Type":"$SAA_SignalType_Geologic;","Type_Localised":"Geological"}]}
+""");
+
+        await reader.ImportAsync(journal, starSystemRepository, commanderRepository, evidenceRepository);
+
+        var system = await starSystemRepository.FindByNameAsync("LHS 3447");
+        Assert.NotNull(system);
+        Assert.Equal(SystemSurveyState.Honked, system!.SurveyState);
+        Assert.Contains("Biological", system.SignalTypes ?? string.Empty);
+        Assert.Contains("Geological", system.SignalTypes ?? string.Empty);
+    }
+
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<ProjectSeshatDbContext>()

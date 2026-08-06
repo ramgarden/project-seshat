@@ -13,9 +13,10 @@ public sealed class MainWindowViewModel : ViewModelBase
 {
     private ViewModelBase _currentPage;
     private bool _isDashboardActive;
+    private bool _isSearchGuideActive;
     private bool _isExplorationActive;
     private bool _isThreadsActive;
-    private bool _isAtlasActive;
+    private bool _isGalaxyMapActive;
     private readonly JournalWatcher? _journalWatcher;
 
     public MainWindowViewModel(
@@ -41,6 +42,9 @@ public sealed class MainWindowViewModel : ViewModelBase
             codexEntryRepository,
             observationRepository);
 
+        SearchGuide = new SearchGuideViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
+        GalaxyMap = new GalaxyMapViewModel(atlasService, starSystemRepository, navigationRepository);
+
         Exploration = new ExplorationViewModel(
             starSystemRepository,
             evidenceRepository,
@@ -48,26 +52,26 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
-        Atlas = new AtlasViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
-
         _journalWatcher = journalWatcher;
         if (_journalWatcher is not null)
         {
             _journalWatcher.Imported += (s, e) =>
             {
                 Dashboard.ReportLiveActivity(e);
+                SearchGuide.Refresh();
+                GalaxyMap.Refresh();
                 Exploration.RefreshExploreView();
-                Atlas.Refresh();
             };
         }
 
         NavigateToDashboardCommand = new RelayCommand(() => CurrentPage = Dashboard);
+        NavigateToSearchGuideCommand = new RelayCommand(() => CurrentPage = SearchGuide);
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
         NavigateToThreadsCommand = new RelayCommand(() => CurrentPage = Threads);
-        NavigateToAtlasCommand = new RelayCommand(() => CurrentPage = Atlas);
+        NavigateToGalaxyMapCommand = new RelayCommand(() => CurrentPage = GalaxyMap);
 
-        // Start on Dashboard
-        _currentPage = Dashboard;
+        // Landing page is the search guide.
+        _currentPage = SearchGuide;
         UpdateActiveStates();
     }
 
@@ -79,11 +83,13 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public DashboardViewModel Dashboard { get; }
 
+    public SearchGuideViewModel SearchGuide { get; }
+
     public ExplorationViewModel Exploration { get; }
 
     public ThreadsViewModel Threads { get; }
 
-    public AtlasViewModel Atlas { get; }
+    public GalaxyMapViewModel GalaxyMap { get; }
 
     public ViewModelBase CurrentPage
     {
@@ -103,6 +109,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isDashboardActive, value);
     }
 
+    public bool IsSearchGuideActive
+    {
+        get => _isSearchGuideActive;
+        private set => SetProperty(ref _isSearchGuideActive, value);
+    }
+
     public bool IsExplorationActive
     {
         get => _isExplorationActive;
@@ -115,19 +127,21 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isThreadsActive, value);
     }
 
-    public bool IsAtlasActive
+    public bool IsGalaxyMapActive
     {
-        get => _isAtlasActive;
-        private set => SetProperty(ref _isAtlasActive, value);
+        get => _isGalaxyMapActive;
+        private set => SetProperty(ref _isGalaxyMapActive, value);
     }
 
     public ICommand NavigateToDashboardCommand { get; }
+
+    public ICommand NavigateToSearchGuideCommand { get; }
 
     public ICommand NavigateToExplorationCommand { get; }
 
     public ICommand NavigateToThreadsCommand { get; }
 
-    public ICommand NavigateToAtlasCommand { get; }
+    public ICommand NavigateToGalaxyMapCommand { get; }
 
     /// <summary>Starts live journal watching so the guide and stats update as the game writes new events.</summary>
     public void StartJournalWatcher() => _journalWatcher?.Start();
@@ -135,9 +149,10 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void UpdateActiveStates()
     {
         IsDashboardActive = CurrentPage == Dashboard;
+        IsSearchGuideActive = CurrentPage == SearchGuide;
         IsExplorationActive = CurrentPage == Exploration;
         IsThreadsActive = CurrentPage == Threads;
-        IsAtlasActive = CurrentPage == Atlas;
+        IsGalaxyMapActive = CurrentPage == GalaxyMap;
     }
 
     private sealed class RelayCommand(Action execute) : ICommand

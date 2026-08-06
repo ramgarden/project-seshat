@@ -143,11 +143,22 @@ public sealed class AtlasServiceTests
         var nav = new InMemoryNavigationStateRepository(
             new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
 
-        var viewModel = new AtlasViewModel(new AtlasService(), systems, new InMemoryBodyRepository(), nav);
+        var viewModel = new GalaxyMapViewModel(new AtlasService(), systems, nav);
 
         Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.Current && p.Name == "HERE");
         Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.Next && p.Name == "NEXT");
         Assert.Contains(viewModel.SkyMapPoints, p => p.Kind == SkyPointKind.System);
+    }
+
+    [Fact]
+    public void GuideTarget_Fss_ExplainsWhySignalTypesMatter()
+    {
+        var target = ProjectSeshat.App.ViewModels.GuideTarget.Fss(
+            new FssTarget("SIGNALS HERE", 3, 50, "Biological,Geological"));
+
+        Assert.Contains("Biological", target.Detail);
+        Assert.Contains("Geological", target.Detail);
+        Assert.Contains("SIGNALS HERE", target.Title);
     }
 
     private sealed class InMemoryNavigationStateRepository : INavigationStateRepository

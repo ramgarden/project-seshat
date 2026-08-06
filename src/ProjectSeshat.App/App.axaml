@@ -4,6 +4,9 @@
              xmlns:views="clr-namespace:ProjectSeshat.App.Views"
              x:Class="ProjectSeshat.App.App">
   <Application.DataTemplates>
+    <DataTemplate DataType="{x:Type vm:SearchGuideViewModel}">
+      <views:SearchGuideView />
+    </DataTemplate>
     <DataTemplate DataType="{x:Type vm:DashboardViewModel}">
       <views:DashboardView />
     </DataTemplate>
@@ -13,8 +16,8 @@
     <DataTemplate DataType="{x:Type vm:ThreadsViewModel}">
       <views:ThreadsView />
     </DataTemplate>
-    <DataTemplate DataType="{x:Type vm:AtlasViewModel}">
-      <views:AtlasView />
+    <DataTemplate DataType="{x:Type vm:GalaxyMapViewModel}">
+      <views:GalaxyMapView />
     </DataTemplate>
   </Application.DataTemplates>
 

@@ -34,11 +34,16 @@ The guide is anchored to the commander's real position. `JournalReader` records 
 - FSS targets are ranked by signal count then distance from the current position; DSS bodies stay ordered by distance from their arrival point.
 - When no position is known yet, it falls back to the centroid of all surveyed systems.
 
-`AtlasViewModel` surfaces `CurrentSystemText`, the ordered honk route (step-numbered), a dedicated `NextJumpTitle` / `NextJumpDetail` focus card in `AtlasView.axaml`, and `SkyMapPoints` for the visual.
+The **Search Guide is the default landing page** (top-level `SearchGuideViewModel` / `SearchGuideView`). It surfaces `CurrentPositionText`, the ordered honk route (step-numbered), dedicated `NextJumpTitle` / `NextJumpDetail`, and the guide lists with per-target "why" explanations:
+
+- **FSS "why"** — `JournalReader` parses `FSSSignalsFound` events and stores the real signal types (`Biological`, `Geological`, etc.) on the system (`StarSystem.SignalTypes`, column added via the `AddSignalTypesToSystems` migration). `FssTarget` carries them and the guide explains which interesting signals are present.
+- **DSS "why"** — body value/terraformability drives the reason text (terraformable, Earth-like, water, ammonia worlds).
+
+The **Galaxy Map** is its own top-level tab (`GalaxyMapViewModel` / `GalaxyMapView`).
 
 ### Galactic sky-map
 
-`ProjectSeshat.App/Controls/AtlasSkyMapControl.cs` is a custom, interactive 3D projection control rendered with Avalonia's `DrawingContext`. It draws surveyed systems (cyan), ranked undiscovered regions (green, from `AtlasService.RankUndiscoveredRegionsAsync`), the commander's current position (gold), and the next jump target (red, a line back to center). Drag rotates the view, scroll zooms, and points are drawn far-to-near for a depth cue. `AtlasViewModel.RefreshSkyMap` builds `SkyMapPoints` (a `SkyPoint`/`SkyPointKind` collection) and the control's `Points` binding re-renders automatically; the whole Atlas page refreshes on live journal import.
+`ProjectSeshat.App/Controls/AtlasSkyMapControl.cs` is a custom, interactive 3D projection control rendered with Avalonia's `DrawingContext`. It draws surveyed systems (cyan), ranked undiscovered regions (green, from `AtlasService.RankUndiscoveredRegionsAsync`), the commander's current position (gold), and the next jump target (red, a line back to center). Drag rotates the view, scroll zooms, and points are drawn far-to-near for a depth cue. `GalaxyMapViewModel.Refresh` builds `SkyMapPoints` (a `SkyPoint`/`SkyPointKind` collection) and the control's `Points` binding re-renders automatically; the map refreshes on live journal import.
 
 ## Quick start
 
@@ -96,9 +101,9 @@ Repository contracts accept a `CancellationToken`; persistence implementations m
 - `GetBodiesForSystemAsync` — catalogued bodies ordered by distance from arrival.
 - `GetSurveySnapshotAsync` — a spatial snapshot (reference coordinates, surveyed systems, surveyed cells).
 - `RankUndiscoveredRegionsAsync` — ranks largely uncharted cells near the surveyed frontier (Milestone 1.0).
-- `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Atlas Survey page (Milestone 1.1).
+- `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Search Guide page (Milestone 1.1).
 
-Presentation lives in `src/ProjectSeshat.App/ViewModels/AtlasViewModel.cs` (`HonkItems`, `FssItems`, `DssItems`, selection detail) and `Views/AtlasView.axaml`. `MainWindowViewModel` wires the `Atlas` page into navigation and refreshes it whenever journal data is imported.
+Presentation lives in `src/ProjectSeshat.App/ViewModels/SearchGuideViewModel.cs` (guide lists + "why" text) and `Views/SearchGuideView.axaml`, with the galaxy map in `GalaxyMapViewModel.cs` / `GalaxyMapView.axaml`. `MainWindowViewModel` wires both pages into navigation (Search Guide is the landing page) and refreshes them whenever journal data is imported.
 
 ## Live journal auto-watch
 

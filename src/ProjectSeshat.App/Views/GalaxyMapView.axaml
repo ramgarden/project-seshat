@@ -1,0 +1,41 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             xmlns:controls="clr-namespace:ProjectSeshat.App.Controls"
+             x:Class="ProjectSeshat.App.Views.GalaxyMapView"
+             x:DataType="vm:GalaxyMapViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.stage-label">
+      <Setter Property="Foreground" Value="#36C5F0" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.2" />
+    </Style>
+    <Style Selector="TextBlock.legend">
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+    <Grid RowDefinitions="Auto,*">
+      <StackPanel Grid.Row="0" Orientation="Horizontal" Spacing="14" Margin="0,0,0,10">
+        <TextBlock Text="{Binding CurrentSystemText}" Foreground="#7FCFB0" FontSize="13" FontWeight="SemiBold" VerticalAlignment="Center" TextWrapping="Wrap" />
+        <TextBlock Text="drag to rotate · scroll to zoom" Foreground="#83B8D5" FontSize="11" VerticalAlignment="Center" />
+        <StackPanel Orientation="Horizontal" Spacing="6">
+          <Ellipse Width="9" Height="9" Fill="#FFD24D" VerticalAlignment="Center" />
+          <TextBlock Classes="legend" Text="you" Foreground="#D2EAF7" />
+          <Ellipse Width="9" Height="9" Fill="#FF5A5A" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock Classes="legend" Text="next jump" Foreground="#D2EAF7" />
+          <Ellipse Width="9" Height="9" Fill="#36C5F0" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock Classes="legend" Text="surveyed system" Foreground="#D2EAF7" />
+          <Ellipse Width="9" Height="9" Fill="#7FCFB0" Margin="8,0,0,0" VerticalAlignment="Center" />
+          <TextBlock Classes="legend" Text="undiscovered region" Foreground="#D2EAF7" />
+        </StackPanel>
+      </StackPanel>
+      <Border Grid.Row="1" Background="#050D16" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6">
+        <controls:AtlasSkyMapControl Points="{Binding SkyMapPoints}" />
+      </Border>
+    </Grid>
+  </Border>
+</UserControl>

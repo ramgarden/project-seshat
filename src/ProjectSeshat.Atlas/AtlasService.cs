@@ -31,7 +31,7 @@ public sealed record SearchGuide(
 public sealed record HonkTarget(string SystemName, double? DistanceLy);
 
 /// <summary>A system the user should FSS next (it has known signals worth resolving).</summary>
-public sealed record FssTarget(string SystemName, int Signals, double? DistanceLy);
+public sealed record FssTarget(string SystemName, int Signals, double? DistanceLy, string? SignalTypes = null);
 
 /// <summary>A specific body the user should Surface-map with DSS.</summary>
 public sealed record DssTarget(string BodyName, string SystemName, double DistanceLs, string Reason);
@@ -178,7 +178,7 @@ public sealed class AtlasService
 
         var fssSystems = await systemRepository.ListBySurveyStateAsync(SystemSurveyState.Honked, 200, cancellationToken);
         var fss = fssSystems
-            .Select(s => new FssTarget(s.Name, s.NonBodySignals, DistanceFrom(s)))
+            .Select(s => new FssTarget(s.Name, s.NonBodySignals, DistanceFrom(s), s.SignalTypes))
             .OrderByDescending(t => t.Signals)
             .ThenBy(t => t.DistanceLy ?? double.MaxValue)
             .ToList();

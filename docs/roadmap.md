@@ -78,10 +78,16 @@
 - [x] Render surveyed systems, ranked undiscovered regions, the commander's current position, and the next jump target on an interactive 3D galactic sky-map.
 - [x] Support drag-to-rotate and scroll-to-zoom on the map; auto-update on journal import.
 
+## Milestone 1.6 — Search guide front-page + signal intelligence
+
+- [x] Promote the search guide (honk / FSS / DSS with jump plotting) to the default landing page as its own top-level tab; split the galaxy map onto its own tab.
+- [x] Add "why" explanations to each guided target (interesting signal types for FSS; body value / terraformability for DSS).
+- [x] Parse `FSSSignalsFound` journal events to capture real signal types per system.
+
 ## Next
 
 - [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
-- [ ] Richer FSS/DSS detail and filtering on the guided search.
+- [ ] Filtering and richer detail on the guided search.
 
 ## Quality
 

@@ -218,6 +218,58 @@ public sealed class JournalReader
             return;
         }
 
+        if (eventType == "FSSSignalsFound" && payload.TryGetValue("SystemName", out var signalSystemElement))
+        {
+            var signalSystemName = signalSystemElement.GetString() ?? string.Empty;
+            if (string.IsNullOrWhiteSpace(signalSystemName))
+            {
+                return;
+            }
+
+            var existing = await starSystemRepository.FindByNameAsync(signalSystemName, cancellationToken);
+            if (existing is null)
+            {
+                return;
+            }
+
+            var names = new HashSet<string>(StringComparer.OrdinalIgnoreCase);
+            if (payload.TryGetValue("Signals", out var signals) && signals.ValueKind == JsonValueKind.Array)
+            {
+                foreach (var signal in signals.EnumerateArray())
+                {
+                    if (signal.TryGetProperty("Type_Localised", out var localised) &&
+                        localised.GetString() is { } localisedName &&
+                        !string.IsNullOrWhiteSpace(localisedName))
+                    {
+                        names.Add(localisedName);
+                    }
+                    else if (signal.TryGetProperty("Type", out var typeProp) &&
+                             typeProp.GetString() is { } rawType &&
+                             DeriveSignalTypeName(rawType) is { } derived)
+                    {
+                        names.Add(derived);
+                    }
+                }
+            }
+
+            if (existing.SignalTypes is not null)
+            {
+                foreach (var existingType in existing.SignalTypes.Split(','))
+                {
+                    names.Add(existingType.Trim());
+                }
+            }
+
+            if (names.Count > 0)
+            {
+                await starSystemRepository.SaveAsync(
+                    existing with { SignalTypes = string.Join(',', names) },
+                    cancellationToken);
+            }
+
+            return;
+        }
+
         if (eventType == "Scan" && payload.TryGetValue("BodyName", out var scanBodyName))
         {
             var bodyNameValue = scanBodyName.GetString() ?? string.Empty;
@@ -411,6 +463,33 @@ public sealed class JournalReader
     /// pass (<c>Detailed</c>) fully maps the body; FSS/auto scans resolve it; a basic
     /// discovery scan only detects it.
     /// </summary>
+    /// <summary>
+    /// Converts a journal signal <c>Type</c> code like <c>$SAA_SignalType_Biological;</c> into a
+    /// friendly name (e.g. "Biological"), or returns null when it cannot be derived.
+    /// </summary>
+    private static string? DeriveSignalTypeName(string rawType)
+    {
+        if (string.IsNullOrWhiteSpace(rawType))
+        {
+            return null;
+        }
+
+        var marker = "SignalType_";
+        var index = rawType.IndexOf(marker, StringComparison.OrdinalIgnoreCase);
+        if (index < 0)
+        {
+            return null;
+        }
+
+        var name = rawType[(index + marker.Length)..].TrimEnd(';').Trim();
+        if (string.IsNullOrWhiteSpace(name) || name.StartsWith("$SAA_", StringComparison.OrdinalIgnoreCase))
+        {
+            return null;
+        }
+
+        return name;
+    }
+
     private static ScanStatus DeriveScanStatus(string? scanType) => scanType switch
     {
         "Detailed" => ScanStatus.Mapped,

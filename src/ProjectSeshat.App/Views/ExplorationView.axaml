@@ -74,35 +74,39 @@
         </ListBox.ItemTemplate>
       </ListBox>
 
-      <StackPanel Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Spacing="16" Margin="24,0,0,0">
-        <TextBlock Classes="section-label" Text="FOCUS" />
-        <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
-          <StackPanel Spacing="16">
-            <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
-            <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
-            <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <TextBlock Text="{Binding SelectedBodyStatus}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
-            <ListBox ItemsSource="{Binding SelectedSystemBodies}"
-                     SelectedItem="{Binding SelectedBody, Mode=TwoWay}"
-                     MaxHeight="220"
-                     ScrollViewer.HorizontalScrollBarVisibility="Disabled"
-                     ScrollViewer.VerticalScrollBarVisibility="Auto">
-              <ListBox.ItemTemplate>
-                <DataTemplate>
-                  <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4">
-                    <TextBlock Text="{Binding Label}" Foreground="#E5F5FF" FontSize="13" TextWrapping="Wrap" />
-                    <TextBlock Text="{Binding Distance}" Foreground="#83B8D5" FontSize="12" VerticalAlignment="Center" />
-                    <TextBlock Text="{Binding ScanLabel}" Foreground="#36C5F0" FontSize="12" VerticalAlignment="Center" />
-                  </StackPanel>
-                </DataTemplate>
-              </ListBox.ItemTemplate>
-            </ListBox>
-            <TextBlock Text="{Binding NeedsDssSummary}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
-            <Border Height="1" Background="#1A4D67" Margin="0,8" />
-            <TextBlock Text="Scan progress comes straight from your journal files. A body is listed once the honk detects it, upgraded when you FSS it, and marked mapped automatically when a Detailed Surface Scanner pass completes." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
-          </StackPanel>
-        </Border>
-      </StackPanel>
+      <ScrollViewer Grid.Row="0" Grid.RowSpan="2" Grid.Column="1" Margin="24,0,0,0"
+                    ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                    ScrollViewer.VerticalScrollBarVisibility="Auto">
+        <StackPanel Spacing="16">
+          <TextBlock Classes="section-label" Text="FOCUS" />
+          <Border Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+            <StackPanel Spacing="16">
+              <TextBlock Text="{Binding SelectedExploreItemTitle}" Foreground="#E5F5FF" FontSize="24" FontWeight="SemiBold" />
+              <TextBlock Text="{Binding SelectedExploreItemDetail}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" LineHeight="20" />
+              <Border Height="1" Background="#1A4D67" Margin="0,8" />
+              <TextBlock Text="{Binding SelectedBodyStatus}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
+              <ListBox ItemsSource="{Binding SelectedSystemBodies}"
+                       SelectedItem="{Binding SelectedBody, Mode=TwoWay}"
+                       MaxHeight="220"
+                       ScrollViewer.HorizontalScrollBarVisibility="Disabled"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <StackPanel Orientation="Horizontal" Spacing="10" Margin="0,4">
+                      <TextBlock Text="{Binding Label}" Foreground="#E5F5FF" FontSize="13" TextWrapping="Wrap" />
+                      <TextBlock Text="{Binding Distance}" Foreground="#83B8D5" FontSize="12" VerticalAlignment="Center" />
+                      <TextBlock Text="{Binding ScanLabel}" Foreground="#36C5F0" FontSize="12" VerticalAlignment="Center" />
+                    </StackPanel>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+              <TextBlock Text="{Binding NeedsDssSummary}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+              <Border Height="1" Background="#1A4D67" Margin="0,8" />
+              <TextBlock Text="Scan progress comes straight from your journal files. A body is listed once the honk detects it, upgraded when you FSS it, and marked mapped automatically when a Detailed Surface Scanner pass completes." Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
+            </StackPanel>
+          </Border>
+        </StackPanel>
+      </ScrollViewer>
     </Grid>
   </Border>
 </UserControl>

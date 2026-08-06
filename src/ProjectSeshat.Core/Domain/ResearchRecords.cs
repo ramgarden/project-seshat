@@ -6,7 +6,8 @@ public sealed record StarSystem(
     string Name,
     GalacticCoordinates? Position = null,
     SystemSurveyState SurveyState = SystemSurveyState.Unexplored,
-    int NonBodySignals = 0);
+    int NonBodySignals = 0,
+    string? SignalTypes = null);
 
 /// <summary>Classifies how far a star system's survey has progressed.</summary>
 public enum SystemSurveyState

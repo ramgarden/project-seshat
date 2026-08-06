@@ -45,6 +45,7 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Position).HasColumnType("TEXT").HasConversion(PositionConverter);
             entity.Property(x => x.SurveyState).HasConversion<string>();
             entity.Property(x => x.NonBodySignals);
+            entity.Property(x => x.SignalTypes);
         });
 
         modelBuilder.Entity<Commander>(entity =>

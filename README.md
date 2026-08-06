@@ -37,6 +37,8 @@ The **Atlas Survey** page is a guided search tool that tells you what to do next
 2. **FSS** — which systems (the honk flagged with signals) to Full Spectrum Scan next.
 3. **DSS** — which specific bodies turned out worth Surface-mapping with the Detailed Surface Scanner.
 
+Each entry explains **why** it's a priority: FSS shows the interesting signal types found there, and DSS explains a body's value (terraformable, Earth-like, water, or ammonia world).
+
 It's driven by your journal files: coordinates come from `StarPos` on `FSDJump`, the system honk from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. The Atlas page also renders an interactive **3D galactic sky-map** of surveyed systems, ranked undiscovered regions, your current position, and the next jump target.
 
 See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) for the initial direction.
