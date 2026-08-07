@@ -33,6 +33,8 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<NavigationState> NavigationStates => Set<NavigationState>();
 
+    public DbSet<SurveyRegion> SurveyRegions => Set<SurveyRegion>();
+
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
         modelBuilder.Entity<StarSystem>(entity =>
@@ -153,6 +155,17 @@ public sealed class ProjectSeshatDbContext : DbContext
 
             // Only one navigation state row at a time.
             entity.HasIndex(x => x.Id).IsUnique();
+        });
+
+        modelBuilder.Entity<SurveyRegion>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new SurveyRegionId(value));
+            entity.Property(x => x.Center).HasColumnType("TEXT").HasConversion(PositionConverter);
+            entity.HasIndex(x => new { x.CellX, x.CellY, x.CellZ }).IsUnique();
+            entity.Property(x => x.LastUpdatedAt).IsRequired();
         });
     }
 

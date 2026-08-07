@@ -14,6 +14,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private ViewModelBase _currentPage;
     private bool _isDashboardActive;
     private bool _isSearchGuideActive;
+    private bool _isSurveyActive;
     private bool _isExplorationActive;
     private bool _isThreadsActive;
     private bool _isGalaxyMapActive;
@@ -31,7 +32,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         ResearchThreadEngine? researchThreadEngine = null,
         InvestigationService? investigationService = null,
         AtlasService? atlasService = null,
-        JournalWatcher? journalWatcher = null)
+        JournalWatcher? journalWatcher = null,
+        ISurveyRegionRepository? surveyRegionRepository = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -43,7 +45,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             observationRepository);
 
         SearchGuide = new SearchGuideViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
-        GalaxyMap = new GalaxyMapViewModel(atlasService, starSystemRepository, navigationRepository);
+        GalaxyMap = new GalaxyMapViewModel(atlasService, starSystemRepository, navigationRepository, surveyRegionRepository);
+        Survey = new SurveyViewModel(atlasService, starSystemRepository, surveyRegionRepository);
 
         Exploration = new ExplorationViewModel(
             starSystemRepository,
@@ -60,12 +63,14 @@ public sealed class MainWindowViewModel : ViewModelBase
                 Dashboard.ReportLiveActivity(e);
                 SearchGuide.Refresh();
                 GalaxyMap.Refresh();
+                Survey.Refresh();
                 Exploration.RefreshExploreView();
             };
         }
 
         NavigateToDashboardCommand = new RelayCommand(() => CurrentPage = Dashboard);
         NavigateToSearchGuideCommand = new RelayCommand(() => CurrentPage = SearchGuide);
+        NavigateToSurveyCommand = new RelayCommand(() => CurrentPage = Survey);
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
         NavigateToThreadsCommand = new RelayCommand(() => CurrentPage = Threads);
         NavigateToGalaxyMapCommand = new RelayCommand(() => CurrentPage = GalaxyMap);
@@ -84,6 +89,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public DashboardViewModel Dashboard { get; }
 
     public SearchGuideViewModel SearchGuide { get; }
+
+    public SurveyViewModel Survey { get; }
 
     public ExplorationViewModel Exploration { get; }
 
@@ -115,6 +122,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isSearchGuideActive, value);
     }
 
+    public bool IsSurveyActive
+    {
+        get => _isSurveyActive;
+        private set => SetProperty(ref _isSurveyActive, value);
+    }
+
     public bool IsExplorationActive
     {
         get => _isExplorationActive;
@@ -137,6 +150,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public ICommand NavigateToSearchGuideCommand { get; }
 
+    public ICommand NavigateToSurveyCommand { get; }
+
     public ICommand NavigateToExplorationCommand { get; }
 
     public ICommand NavigateToThreadsCommand { get; }
@@ -150,6 +165,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     {
         IsDashboardActive = CurrentPage == Dashboard;
         IsSearchGuideActive = CurrentPage == SearchGuide;
+        IsSurveyActive = CurrentPage == Survey;
         IsExplorationActive = CurrentPage == Exploration;
         IsThreadsActive = CurrentPage == Threads;
         IsGalaxyMapActive = CurrentPage == GalaxyMap;

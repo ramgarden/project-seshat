@@ -53,6 +53,7 @@ public sealed class App : Application
         var codexEntryRepository = new CodexEntryRepository(context);
         var observationRepository = new ObservationRepository(context);
         var navigationRepository = new NavigationStateRepository(context);
+        var surveyRegionRepository = new SurveyRegionRepository(context);
         var researchThreadRepository = new ResearchThreadRepository(context);
         var researchThreadEngine = new ResearchThreadEngine(researchThreadRepository);
         var investigationService = new InvestigationService(evidenceRepository, researchThreadRepository);
@@ -73,7 +74,8 @@ public sealed class App : Application
             researchThreadEngine,
             investigationService,
             atlasService,
-            journalWatcher);
+            journalWatcher,
+            surveyRegionRepository);
 
         return viewModel;
     }

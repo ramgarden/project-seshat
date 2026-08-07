@@ -1,0 +1,58 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.SurveyView"
+             x:DataType="vm:SurveyViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="Foreground" Value="#7DAAC4" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="TextBlock.col-header">
+      <Setter Property="Foreground" Value="#36C5F0" />
+      <Setter Property="FontSize" Value="11" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.0" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+    <Grid RowDefinitions="Auto,*">
+      <StackPanel Grid.Row="0" Spacing="6" Margin="0,0,0,14">
+        <TextBlock Classes="section-label" Text="ATLAS SURVEY — SOURCE OF TRUTH" />
+        <TextBlock Text="{Binding SummaryText}" Foreground="#D2EAF7" FontSize="14" TextWrapping="Wrap" />
+      </StackPanel>
+
+      <ScrollViewer Grid.Row="1" HorizontalScrollBarVisibility="Disabled" VerticalScrollBarVisibility="Auto">
+        <Grid ColumnDefinitions="48,*,140,110,130,110">
+          <TextBlock Classes="col-header" Text="#" Grid.Column="0" />
+          <TextBlock Classes="col-header" Text="Region" Grid.Column="1" />
+          <TextBlock Classes="col-header" Text="Distance" Grid.Column="2" />
+          <TextBlock Classes="col-header" Text="Score" Grid.Column="3" />
+          <TextBlock Classes="col-header" Text="Nearby" Grid.Column="4" />
+          <TextBlock Classes="col-header" Text="Status" Grid.Column="5" />
+
+          <ItemsControl Grid.Row="1" Grid.ColumnSpan="6" ItemsSource="{Binding Regions}">
+            <ItemsControl.ItemTemplate>
+              <DataTemplate>
+                <Border Padding="10,8" Background="#08111D" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4">
+                  <Grid ColumnDefinitions="48,*,140,110,130,110">
+                    <TextBlock Text="{Binding Rank}" Grid.Column="0" Foreground="#47738C" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding Label}" Grid.Column="1" Foreground="#E5F5FF" FontWeight="SemiBold" FontSize="13" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding DistanceText}" Grid.Column="2" Foreground="#83B8D5" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding ScoreText}" Grid.Column="3" Foreground="#7FCFB0" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding NearbyText}" Grid.Column="4" Foreground="#83B8D5" FontSize="12" VerticalAlignment="Center" />
+                    <TextBlock Text="{Binding StatusText}" Grid.Column="5" Foreground="#36C5F0" FontSize="12" FontWeight="SemiBold" VerticalAlignment="Center" />
+                  </Grid>
+                </Border>
+              </DataTemplate>
+            </ItemsControl.ItemTemplate>
+          </ItemsControl>
+        </Grid>
+      </ScrollViewer>
+    </Grid>
+  </Border>
+</UserControl>

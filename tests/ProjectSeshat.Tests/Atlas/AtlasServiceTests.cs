@@ -161,6 +161,54 @@ public sealed class AtlasServiceTests
         Assert.Contains("SIGNALS HERE", target.Title);
     }
 
+    [Fact]
+    public async Task RefreshSurveyRegions_PersistsThenMarksCharted()
+    {
+        var systems = new InMemorySystemRepository();
+        systems.Add(new StarSystem(new StarSystemId(1), "HOME", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned));
+        var regions = new InMemorySurveyRegionRepository();
+        var atlas = new AtlasService();
+
+        await atlas.RefreshSurveyRegionsAsync(systems, regions);
+        var before = await regions.ListAsync(1000);
+        Assert.NotEmpty(before);
+
+        var frontier = before.First(r => !r.Surveyed);
+
+        // Chart the frontier cell by placing a system inside it, then refresh again.
+        systems.Add(new StarSystem(new StarSystemId(99), "EXPEDITION", frontier.Center, SystemSurveyState.FssScanned));
+        await atlas.RefreshSurveyRegionsAsync(systems, regions);
+
+        var after = await regions.ListAsync(1000);
+        Assert.Contains(after, r => r.CellX == frontier.CellX && r.CellY == frontier.CellY && r.CellZ == frontier.CellZ && r.Surveyed);
+    }
+
+    private sealed class InMemorySurveyRegionRepository : ISurveyRegionRepository
+    {
+        private readonly List<SurveyRegion> _regions = new();
+
+        public Task<IReadOnlyList<SurveyRegion>> ListAsync(int maxCount, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SurveyRegion>>(
+                _regions.OrderBy(r => r.Surveyed).ThenByDescending(r => r.Score).Take(maxCount).ToList());
+
+        public Task<IReadOnlyList<SurveyRegion>> ListUnsurveyedAsync(int maxCount, CancellationToken cancellationToken = default)
+            => Task.FromResult<IReadOnlyList<SurveyRegion>>(
+                _regions.Where(r => !r.Surveyed).OrderByDescending(r => r.Score).Take(maxCount).ToList());
+
+        public Task<int> CountAsync(CancellationToken cancellationToken = default) => Task.FromResult(_regions.Count);
+
+        public ValueTask SaveAllAsync(IEnumerable<SurveyRegion> regions, CancellationToken cancellationToken = default)
+        {
+            foreach (var region in regions)
+            {
+                var i = _regions.FindIndex(r => r.CellX == region.CellX && r.CellY == region.CellY && r.CellZ == region.CellZ);
+                if (i >= 0) _regions[i] = region; else _regions.Add(region);
+            }
+
+            return ValueTask.CompletedTask;
+        }
+    }
+
     private sealed class InMemoryNavigationStateRepository : INavigationStateRepository
     {
         private NavigationState? _state;

@@ -135,6 +135,105 @@ public sealed class AtlasService
             .ToList();
     }
 
+    /// <summary>
+    /// Recomputes the frontier regions from the current survey data and persists them as the
+    /// source-of-truth survey listing. Regions are stable per grid cell: already-persisted cells
+    /// keep their identity, and cells that become charted are flagged surveyed.
+    /// </summary>
+    public async Task RefreshSurveyRegionsAsync(
+        IStarSystemRepository systemRepository,
+        ISurveyRegionRepository regionRepository,
+        double cellSizeLy = 500,
+        int gridRadius = 4,
+        CancellationToken cancellationToken = default)
+    {
+        var systems = await systemRepository.ListWithPositionAsync(10000, cancellationToken);
+        var positions = systems.Select(s => s.Position!).Where(p => p is not null).Select(p => (GalacticCoordinates)p!).ToList();
+        if (positions.Count == 0)
+        {
+            return;
+        }
+
+        var reference = Centroid(positions);
+        var surveyedCells = positions
+            .GroupBy(p => Cell(p, cellSizeLy))
+            .ToDictionary(g => g.Key, g => g.Count());
+
+        // Frontier cells: not yet charted, but sharing a face with at least one charted cell.
+        var home = Cell(reference, cellSizeLy);
+        var homeIndex = (home.Item1, home.Item2, home.Item3);
+        var candidates = new List<(int, int, int)>();
+        for (var x = homeIndex.Item1 - gridRadius; x <= homeIndex.Item1 + gridRadius; x++)
+        for (var y = homeIndex.Item2 - gridRadius; y <= homeIndex.Item2 + gridRadius; y++)
+        for (var z = homeIndex.Item3 - gridRadius; z <= homeIndex.Item3 + gridRadius; z++)
+        {
+            if (surveyedCells.ContainsKey((x, y, z)))
+            {
+                continue;
+            }
+
+            if (HasSurveyedNeighbor((x, y, z), surveyedCells))
+            {
+                candidates.Add((x, y, z));
+            }
+        }
+
+        var existing = (await regionRepository.ListAsync(100000, cancellationToken)).ToList();
+        var now = DateTimeOffset.UtcNow;
+        var toSave = new List<SurveyRegion>();
+
+        foreach (var cell in candidates)
+        {
+            var center = new GalacticCoordinates(
+                (cell.Item1 + 0.5) * cellSizeLy,
+                (cell.Item2 + 0.5) * cellSizeLy,
+                (cell.Item3 + 0.5) * cellSizeLy);
+            var nearby = CountVisitedNear(cell, positions, cellSizeLy);
+            var distance = Distance(center, reference);
+            var score = nearby + 1.0 / (1.0 + distance / cellSizeLy);
+
+            var existingRegion = existing.FirstOrDefault(r =>
+                r.CellX == cell.Item1 && r.CellY == cell.Item2 && r.CellZ == cell.Item3);
+
+            if (existingRegion is not null)
+            {
+                toSave.Add(existingRegion with
+                {
+                    Score = score,
+                    NearbyVisitedSystems = nearby,
+                    DistanceFromReferenceLy = distance,
+                    Surveyed = false,
+                    LastUpdatedAt = now
+                });
+            }
+            else
+            {
+                toSave.Add(new SurveyRegion(
+                    new SurveyRegionId(Guid.NewGuid()),
+                    cell.Item1,
+                    cell.Item2,
+                    cell.Item3,
+                    center,
+                    score,
+                    nearby,
+                    distance,
+                    false,
+                    now));
+            }
+        }
+
+        // Flag any previously persisted region whose cell has since been charted.
+        foreach (var region in existing)
+        {
+            if (surveyedCells.ContainsKey((region.CellX, region.CellY, region.CellZ)))
+            {
+                toSave.Add(region with { Surveyed = true, LastUpdatedAt = now });
+            }
+        }
+
+        await regionRepository.SaveAllAsync(toSave, cancellationToken);
+    }
+
     public async Task<SearchGuide> BuildSearchGuideAsync(
         IStarSystemRepository systemRepository,
         ICelestialBodyRepository bodyRepository,

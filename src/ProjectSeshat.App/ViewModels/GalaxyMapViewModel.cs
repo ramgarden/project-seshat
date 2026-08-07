@@ -13,17 +13,20 @@ public sealed class GalaxyMapViewModel : ViewModelBase
     private readonly AtlasService? _atlas;
     private readonly IStarSystemRepository? _systemRepository;
     private readonly INavigationStateRepository? _navigationRepository;
+    private readonly ISurveyRegionRepository? _regionRepository;
     private string _currentSystemText = "Current position unknown";
     private IReadOnlyList<SkyPoint> _skyMapPoints = Array.Empty<SkyPoint>();
 
     public GalaxyMapViewModel(
         AtlasService? atlas = null,
         IStarSystemRepository? systemRepository = null,
-        INavigationStateRepository? navigationRepository = null)
+        INavigationStateRepository? navigationRepository = null,
+        ISurveyRegionRepository? regionRepository = null)
     {
         _atlas = atlas;
         _systemRepository = systemRepository;
         _navigationRepository = navigationRepository;
+        _regionRepository = regionRepository;
         Refresh();
     }
 
@@ -65,7 +68,16 @@ public sealed class GalaxyMapViewModel : ViewModelBase
             }
         }
 
-        if (_atlas is not null)
+        if (_regionRepository is not null)
+        {
+            // Source of truth: draw the persisted frontier (unsurveyed) regions on the map.
+            var regions = _regionRepository.ListUnsurveyedAsync(200).GetAwaiter().GetResult();
+            foreach (var region in regions)
+            {
+                points.Add(new SkyPoint(region.Center, "Undiscovered region", SkyPointKind.Region));
+            }
+        }
+        else if (_atlas is not null)
         {
             var regions = _atlas.RankUndiscoveredRegionsAsync(_systemRepository, maxRegions: 12).GetAwaiter().GetResult();
             foreach (var region in regions)

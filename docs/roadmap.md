@@ -84,9 +84,14 @@
 - [x] Add "why" explanations to each guided target (interesting signal types for FSS; body value / terraformability for DSS).
 - [x] Parse `FSSSignalsFound` journal events to capture real signal types per system.
 
+## Milestone 1.7 — Source-of-truth Atlas survey
+
+- [x] Persist frontier survey regions (per grid cell) so the survey survives restarts.
+- [x] Flag a region as charted once systems are surveyed inside it.
+- [x] Add an Atlas Survey listing view; the galaxy map draws regions from the persisted survey.
+
 ## Next
 
-- [ ] Add source-of-truth listing for Atlas Survey (persisted region/mapping records beyond the live journal view).
 - [ ] Filtering and richer detail on the guided search.
 
 ## Quality

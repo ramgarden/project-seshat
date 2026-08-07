@@ -23,3 +23,6 @@ public readonly record struct ResearchThreadId(Guid Value);
 
 /// <summary>Identifies the commander's persisted navigation state.</summary>
 public readonly record struct NavigationStateId(Guid Value);
+
+/// <summary>Identifies a persisted survey region in the atlas.</summary>
+public readonly record struct SurveyRegionId(Guid Value);

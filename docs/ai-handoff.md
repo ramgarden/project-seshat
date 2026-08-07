@@ -41,6 +41,10 @@ The **Search Guide is the default landing page** (top-level `SearchGuideViewMode
 
 The **Galaxy Map** is its own top-level tab (`GalaxyMapViewModel` / `GalaxyMapView`).
 
+### Source-of-truth Atlas survey
+
+`AtlasService.RefreshSurveyRegionsAsync` recomputes the frontier regions and persists them as `SurveyRegion` rows (EF table `SurveyRegions`, added via the `AddSurveyRegions` migration) keyed by galactic grid cell, so the survey survives restarts. Regions are flagged `Surveyed` once systems are charted inside their cell. This runs automatically on journal import and on the Atlas Survey page. The **Atlas Survey** page (`SurveyViewModel` / `SurveyView`) lists the regions with rank, distance, score, nearby charted systems, and status; the **Galaxy Map** draws its region markers from this persisted source of truth (`ISurveyRegionRepository.ListUnsurveyedAsync`) instead of recomputing live.
+
 ### Galactic sky-map
 
 `ProjectSeshat.App/Controls/AtlasSkyMapControl.cs` is a custom, interactive 3D projection control rendered with Avalonia's `DrawingContext`. It draws surveyed systems (cyan), ranked undiscovered regions (green, from `AtlasService.RankUndiscoveredRegionsAsync`), the commander's current position (gold), and the next jump target (red, a line back to center). Drag rotates the view, scroll zooms, and points are drawn far-to-near for a depth cue. `GalaxyMapViewModel.Refresh` builds `SkyMapPoints` (a `SkyPoint`/`SkyPointKind` collection) and the control's `Points` binding re-renders automatically; the map refreshes on live journal import.
@@ -89,8 +93,9 @@ The Core API is located under `src/ProjectSeshat.Core/Domain` and `src/ProjectSe
 - `ResearchRecords.cs` — `StarSystem` (with `Position`, `SurveyState`, `NonBodySignals`), `Commander`, `JournalImportKey`, `EvidenceRecord`/`EvidenceKind`, plus Atlas records `GalacticCoordinates`, `BodyKind`, `ScanStatus`, `CelestialBody`, and codex/observatory records.
 - `Threads.cs` — research thread records.
 - `NavigationState.cs` — the commander's current system (for jump-plotting).
+- `SurveyRegion.cs` — persisted frontier/uncharted regions keyed by grid cell (the source-of-truth survey).
 - `JournalImportTracker.cs` — import de-duplication by content fingerprint.
-- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`.
+- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`, `ISurveyRegionRepository`.
 
 Repository contracts accept a `CancellationToken`; persistence implementations must follow these public contracts.
 
