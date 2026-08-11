@@ -6,6 +6,7 @@
     <PackageReference Include="Avalonia" />
     <PackageReference Include="Avalonia.Desktop" />
     <PackageReference Include="Avalonia.Themes.Fluent" />
+    <PackageReference Include="System.Speech" />
   </ItemGroup>
   <ItemGroup>
     <ProjectReference Include="..\ProjectSeshat.Core\ProjectSeshat.Core.csproj" />

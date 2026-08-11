@@ -1,0 +1,13 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.GuidanceOverlayView"
+             x:DataType="vm:GuidanceOverlayViewModel">
+  <Border Background="#B0121B2E" BorderBrush="#7FCFB0" BorderThickness="1" CornerRadius="6" Padding="14,10">
+    <StackPanel Spacing="3">
+      <TextBlock Text="NEXT STEP · PROJECT SESHAT" Foreground="#7FCFB0" FontSize="11" FontWeight="SemiBold" LetterSpacing="1.2" />
+      <TextBlock Text="{Binding TitleText}" Foreground="#E5F5FF" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
+      <TextBlock Text="{Binding DetailText}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
+    </StackPanel>
+  </Border>
+</UserControl>

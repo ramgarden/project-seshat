@@ -142,6 +142,17 @@ Presentation lives in `src/ProjectSeshat.App/ViewModels/SearchGuideViewModel.cs`
 
 Because every import is idempotent at the domain level (existence checks on systems, bodies, evidence, codex) and guarded by the import tracker, automatic scanning is safe. The dashboard reflects live activity via `DashboardViewModel.ReportLiveActivity`.
 
+## On-screen guidance overlay & voice (Milestone 1.10)
+
+The **in-game guidance overlay** (`Views/GuidanceOverlayWindow.cs`) is an always-on-top, borderless, click-through caption (Win32 `WS_EX_TRANSPARENT`/`WS_EX_TOOLWINDOW`/`WS_EX_NOACTIVATE` applied via P/Invoke on Windows) positioned at the bottom-centre of the primary display. It renders the live outward-crawl step (`GuidanceOverlayViewModel` bound via `GuidanceOverlayView.axaml`): `JUMP → SOL`, `HONK → HERE`, `FSS → SYS`, `DSS → BODY`, `BACK-TRACK → X`, or `NO NEXT MOVE`.
+
+- Text/TTS copy is derived offline-testably in `GuidanceFormatter`/`GuidanceOverlayViewModel` (pure logic over the 1.9 `CrawlStep`), so overlay text and the voice transcript are fully unit-tested.
+- **Voice pings**: `IVoicePinger` + `WindowsSpeechVoicePinger` (System.Speech TTS, Windows-only, fails safe) and `SilentVoicePinger` for tests/non-Windows. The main window has a "Speak next step" button; steps are spoken automatically when the overlay is visible.
+- **Overlay toggle** lives in the sidebar footer; visibility is owned by `MainWindowViewModel.OverlayVisible` and the window is shown/hidden in `App.CreateMainWindow` on property change.
+- **Gate picker**: the Search Guide's recommended-gate card has a "Use as gate" button (`SelectRecommendedGateCommand`) that anchors the outward crawl at that system via `gateSystemId`, plus a "Clear" path through the same button.
+
+The window/TTS behaviour itself requires manual on-device validation (can't be exercised in this sandbox); all derivation logic is covered by unit tests. **Milestone 1.11 (keybinding auto-targeting)** will read the commander's ED `*.binds` and synthesize target/jump input, falling back to naming the star in this overlay.
+
 ## Desktop application
 
 The UI lives in `src/ProjectSeshat.App`.
@@ -171,7 +182,7 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (73 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (81 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
@@ -185,7 +196,7 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestone 1.9 (systematic outward search) is implemented** in `AtlasService` (`BuildOutwardCrawlAsync`, `RecommendSearchGateAsync`) and surfaced on the Search Guide page. The next candidate is **Milestone 1.10 — On-screen guidance overlay**: a transparent click-through subtitle over the game naming each step (from the 1.9 crawl `CrawlStep`) + optional Windows TTS voice pings + a gate picker, followed by **1.11 Keybinding auto-targeting** (reads the player's ED `*.binds` and synthesizes target/jump input, falling back to naming the star in the overlay). The crawl/route/back-track/gate logic sits behind Core contracts; only the window/keyboard automation needs on-device checks. Other next steps:
+Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestones 1.9 (systematic outward search) and 1.10 (on-screen guidance overlay + voice) are implemented.** The next candidate is **Milestone 1.11 — Keybinding auto-targeting**: reads the commander's ED `*.binds`, discovers the actual keys for target selection / hyperjump, and synthesizes target/jump input so the player just confirms the jump — falling back to naming the star in the 1.10 overlay when bindings aren't found. The overlay/vista behaviour needs manual on-device checks; the crawl logic is fully tested offline. Other next steps:
 
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).

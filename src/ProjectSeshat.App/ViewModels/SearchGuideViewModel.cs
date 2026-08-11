@@ -1,5 +1,6 @@
 using System;
 using System.Collections.ObjectModel;
+using System.Windows.Input;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Core.Domain;
@@ -24,6 +25,8 @@ public sealed class SearchGuideViewModel : ViewModelBase
     private string _outwardNextReason = "Build an outward survey from the gate below to start hunting Raxxla systematically.";
     private string _recommendedGate = "No gate found";
     private string _recommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+    private CrawlStep? _currentStep;
+    private StarSystemId? _selectedGateId;
 
     public SearchGuideViewModel(
         AtlasService? atlas = null,
@@ -35,6 +38,10 @@ public sealed class SearchGuideViewModel : ViewModelBase
         _systemRepository = systemRepository;
         _bodyRepository = bodyRepository;
         _navigationRepository = navigationRepository;
+
+        SelectRecommendedGateCommand = new RelayCommand(SelectRecommendedGate);
+        ClearGateCommand = new RelayCommand(ClearGate);
+
         Refresh();
     }
 
@@ -107,6 +114,51 @@ public sealed class SearchGuideViewModel : ViewModelBase
 
     public bool HasRecommendedGate => !string.IsNullOrEmpty(RecommendedGate) && RecommendedGate != "No gate found";
 
+    public bool HasSelectedGate => _selectedGateId is not null;
+
+    public string GateActionText => _selectedGateId is null ? "Use as gate" : $"Gate: {RecommendedGate} · Clear";
+
+    public ICommand SelectRecommendedGateCommand { get; }
+
+    public ICommand ClearGateCommand { get; }
+
+    /// <summary>Raised whenever the outward-crawl step changes so overlays/voice can follow.</summary>
+    public event Action<CrawlStep?>? CrawlUpdated;
+
+    /// <summary>The current ranked crawl step (Honk/FSS/DSS/Jump/Back-track), or null when done.</summary>
+    public CrawlStep? CurrentStep => _currentStep;
+
+    private void SelectRecommendedGate()
+    {
+        if (_atlas is null || _systemRepository is null || string.IsNullOrEmpty(RecommendedGate))
+        {
+            return;
+        }
+
+        var gate = _systemRepository.FindByNameAsync(RecommendedGate).GetAwaiter().GetResult();
+        if (gate is not null)
+        {
+            _selectedGateId = gate.Id;
+            OnPropertyChanged(nameof(HasSelectedGate));
+            OnPropertyChanged(nameof(GateActionText));
+            Refresh();
+        }
+    }
+
+    private void ClearGate()
+    {
+        if (_selectedGateId is null)
+        {
+            SelectRecommendedGate();
+            return;
+        }
+
+        _selectedGateId = null;
+        OnPropertyChanged(nameof(HasSelectedGate));
+        OnPropertyChanged(nameof(GateActionText));
+        Refresh();
+    }
+
     public void Refresh()
     {
         HonkItems.Clear();
@@ -124,7 +176,16 @@ public sealed class SearchGuideViewModel : ViewModelBase
         var crawl = _atlas.BuildOutwardCrawlAsync(
             _systemRepository,
             navigationRepository: _navigationRepository,
-            bodyRepository: _bodyRepository).GetAwaiter().GetResult();
+            bodyRepository: _bodyRepository,
+            gateSystemId: _selectedGateId).GetAwaiter().GetResult();
+
+        _currentStep = crawl.NextStep ?? (crawl.Route.Count > 0
+            ? new CrawlStep(
+                crawl.Route[0].Kind == CrawlHopKind.BackTrack ? "Back-track" : "Jump",
+                crawl.Route[0].SystemName,
+                crawl.Route[0].Reason)
+            : null);
+        CrawlUpdated?.Invoke(_currentStep);
 
         if (crawl.NextStep is { } nextStep)
         {
@@ -193,6 +254,19 @@ public sealed class SearchGuideViewModel : ViewModelBase
         }
 
         SummaryText = $"Next: {guide.HonkCount} system{(guide.HonkCount == 1 ? "" : "s")} to honk, then {guide.FssCount} to FSS, and {guide.DssCount} bod{(guide.DssCount == 1 ? "y" : "ies")} worth a DSS scan.";
+    }
+
+    private sealed class RelayCommand(Action execute) : ICommand
+    {
+        public event EventHandler? CanExecuteChanged
+        {
+            add { }
+            remove { }
+        }
+
+        public bool CanExecute(object? parameter) => true;
+
+        public void Execute(object? parameter) => execute();
     }
 }
 

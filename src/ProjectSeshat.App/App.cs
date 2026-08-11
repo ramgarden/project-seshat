@@ -3,6 +3,7 @@ using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.App.ViewModels;
+using ProjectSeshat.App.Views;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
@@ -82,7 +83,8 @@ public sealed class App : Application
             atlasService,
             journalWatcher,
             surveyRegionRepository,
-            communityService);
+            communityService,
+            new WindowsSpeechVoicePinger());
 
         return viewModel;
     }
@@ -120,6 +122,23 @@ public sealed class App : Application
     {
         var viewModel = CreateViewModel();
         viewModel.StartJournalWatcher();
+
+        var overlay = new GuidanceOverlayWindow(viewModel.Guidance);
+        viewModel.PropertyChanged += (_, e) =>
+        {
+            if (e.PropertyName == nameof(MainWindowViewModel.OverlayVisible))
+            {
+                if (viewModel.OverlayVisible)
+                {
+                    overlay.Show();
+                }
+                else
+                {
+                    overlay.Hide();
+                }
+            }
+        };
+
         return new MainWindow(viewModel);
     }
 }

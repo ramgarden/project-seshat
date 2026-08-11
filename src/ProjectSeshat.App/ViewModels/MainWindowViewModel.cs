@@ -20,6 +20,9 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isThreadsActive;
     private bool _isGalaxyMapActive;
     private readonly JournalWatcher? _journalWatcher;
+    private readonly IVoicePinger? _voicePinger;
+    private bool _overlayVisible;
+    private string _overlayVisibilityText = "Show overlay";
 
     public MainWindowViewModel(
         IStarSystemRepository starSystemRepository,
@@ -35,7 +38,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         AtlasService? atlasService = null,
         JournalWatcher? journalWatcher = null,
         ISurveyRegionRepository? surveyRegionRepository = null,
-        CommunityService? communityService = null)
+        CommunityService? communityService = null,
+        IVoicePinger? voicePinger = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -58,6 +62,11 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
+        _voicePinger = voicePinger ?? new SilentVoicePinger();
+        Guidance = new GuidanceOverlayViewModel();
+        SearchGuide.CrawlUpdated += OnCrawlUpdated;
+        OverlayVisible = _voicePinger.IsAvailable;
+
         _journalWatcher = journalWatcher;
         if (_journalWatcher is not null)
         {
@@ -77,6 +86,9 @@ public sealed class MainWindowViewModel : ViewModelBase
         NavigateToExplorationCommand = new RelayCommand(() => CurrentPage = Exploration);
         NavigateToThreadsCommand = new RelayCommand(() => CurrentPage = Threads);
         NavigateToGalaxyMapCommand = new RelayCommand(() => CurrentPage = GalaxyMap);
+
+        ToggleOverlayCommand = new RelayCommand(ToggleOverlay);
+        SpeakNowCommand = new RelayCommand(SpeakNow);
 
         // Landing page is the search guide.
         _currentPage = SearchGuide;
@@ -100,6 +112,28 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ThreadsViewModel Threads { get; }
 
     public GalaxyMapViewModel GalaxyMap { get; }
+
+    public GuidanceOverlayViewModel Guidance { get; }
+
+    public bool OverlayVisible
+    {
+        get => _overlayVisible;
+        private set
+        {
+            if (SetProperty(ref _overlayVisible, value))
+            {
+                OverlayVisibilityText = value ? "Hide overlay" : "Show overlay";
+            }
+        }
+    }
+
+    public string OverlayVisibilityText
+    {
+        get => _overlayVisibilityText;
+        private set => SetProperty(ref _overlayVisibilityText, value);
+    }
+
+    public bool VoiceAvailable => _voicePinger is { IsAvailable: true };
 
     public ViewModelBase CurrentPage
     {
@@ -161,8 +195,25 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public ICommand NavigateToGalaxyMapCommand { get; }
 
+    public ICommand ToggleOverlayCommand { get; }
+
+    public ICommand SpeakNowCommand { get; }
+
     /// <summary>Starts live journal watching so the guide and stats update as the game writes new events.</summary>
     public void StartJournalWatcher() => _journalWatcher?.Start();
+
+    private void OnCrawlUpdated(ProjectSeshat.Atlas.CrawlStep? step)
+    {
+        Guidance.SetStep(step);
+        if (step is not null && OverlayVisible)
+        {
+            _voicePinger?.Speak(Guidance.Transcript ?? "");
+        }
+    }
+
+    private void ToggleOverlay() => OverlayVisible = !OverlayVisible;
+
+    private void SpeakNow() => _voicePinger?.Speak(Guidance.Transcript ?? "");
 
     private void UpdateActiveStates()
     {

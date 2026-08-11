@@ -31,6 +31,28 @@
     <Style Selector="ListBoxItem:selected /template/ ContentPresenter">
       <Setter Property="Background" Value="Transparent" />
     </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.action:pointerover">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.action:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.action:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.action:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
   </UserControl.Styles>
 
   <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
@@ -114,6 +136,9 @@
                   <TextBlock Classes="stage-label" Text="OUTWARD SURVEY — RECOMMENDED GATE" />
                   <TextBlock Text="{Binding RecommendedGate}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding RecommendedGateReasoning}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
+                  <Button Classes="action" Command="{Binding SelectRecommendedGateCommand}" HorizontalAlignment="Left" Margin="0,8,0,0">
+                    <TextBlock Text="{Binding GateActionText}" />
+                  </Button>
                 </StackPanel>
               </Border>
               <Border Background="#0E1B28" BorderBrush="#F2C14E" BorderThickness="1" CornerRadius="6" Padding="16">

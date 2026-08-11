@@ -115,11 +115,11 @@ Goal: turn the guided search into a **methodical outward survey** computed in `A
 
 Goal: show the next action as a transparent subtitle **over the game** so the player never needs to alt-tab. Depends on 1.9's crawl state; window/voice behaviour needs manual on-device validation.
 
-- [ ] Transparent subtitle window **over the game**: always-on-top, click-through (Win32 `WS_EX_TRANSPARENT`/`WS_EX_LAYERED`), bottom-of-screen caption style. Renders the live next action from 1.9: `Honk here`, `FSS <system> for <signals>`, `DSS <body>`, `Jump to <star>` (nearest unsearched), `Back-track to <star>`, or `Nothing interesting — jump to <next star>`.
-- [ ] "Proposed search gate" picker in the app UI: shows the recommended starting star with score + reasoning from 1.9, clickable to set the crawl origin.
-- [ ] If keybind automation can't run (no bindings found / refused), the overlay's job is simply to **name the star** so the player picks it from the in-game Navigation panel's nearby list — no hotkey required.
-- [ ] Optional voice pings (Windows TTS via `SpeechSynthesizer`) speaking each step for sound-off play.
-- [ ] Keep text/transcript derivation testable offline: overlay copy and TTS transcript come from the 1.9 Core contracts.
+- [x] Transparent subtitle window **over the game**: always-on-top, click-through (Win32 `WS_EX_TRANSPARENT`/`WS_EX_LAYERED`), bottom-of-screen caption style. Renders the live next action from 1.9: `Honk here`, `FSS <system> for <signals>`, `DSS <body>`, `Jump to <star>` (nearest unsearched), `Back-track to <star>`, or `Nothing interesting — jump to <next star>`.
+- [x] "Proposed search gate" picker in the app UI: shows the recommended starting star with score + reasoning from 1.9, clickable to set the crawl origin.
+- [x] If keybind automation can't run (no bindings found / refused), the overlay's job is simply to **name the star** so the player picks it from the in-game Navigation panel's nearby list — no hotkey required.
+- [x] Optional voice pings (Windows TTS via `SpeechSynthesizer`) speaking each step for sound-off play.
+- [x] Keep text/transcript derivation testable offline: overlay copy and TTS transcript come from the 1.9 Core contracts (`GuidanceFormatter` / `GuidanceOverlayViewModel`, fully unit-tested).
 
 ## Milestone 1.11 — Keybinding auto-targeting
 
