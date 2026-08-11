@@ -20,6 +20,10 @@ public sealed class SearchGuideViewModel : ViewModelBase
     private string _nextJumpTitle = "No next jump";
     private string _nextJumpDetail = "Every reachable system is already searched. Import more journals or plot deeper.";
     private GuideTarget? _selectedTarget;
+    private string _outwardNext = "No search in progress";
+    private string _outwardNextReason = "Build an outward survey from the gate below to start hunting Raxxla systematically.";
+    private string _recommendedGate = "No gate found";
+    private string _recommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
 
     public SearchGuideViewModel(
         AtlasService? atlas = null,
@@ -77,6 +81,32 @@ public sealed class SearchGuideViewModel : ViewModelBase
 
     public string SelectedTargetDetail => SelectedTarget?.Detail ?? "Select an entry above to see details and why it is a priority.";
 
+    public string OutwardNext
+    {
+        get => _outwardNext;
+        private set => SetProperty(ref _outwardNext, value);
+    }
+
+    public string OutwardNextReason
+    {
+        get => _outwardNextReason;
+        private set => SetProperty(ref _outwardNextReason, value);
+    }
+
+    public string RecommendedGate
+    {
+        get => _recommendedGate;
+        private set => SetProperty(ref _recommendedGate, value);
+    }
+
+    public string RecommendedGateReasoning
+    {
+        get => _recommendedGateReasoning;
+        private set => SetProperty(ref _recommendedGateReasoning, value);
+    }
+
+    public bool HasRecommendedGate => !string.IsNullOrEmpty(RecommendedGate) && RecommendedGate != "No gate found";
+
     public void Refresh()
     {
         HonkItems.Clear();
@@ -90,6 +120,44 @@ public sealed class SearchGuideViewModel : ViewModelBase
         }
 
         var guide = _atlas.BuildSearchGuideAsync(_systemRepository, _bodyRepository, _navigationRepository).GetAwaiter().GetResult();
+
+        var crawl = _atlas.BuildOutwardCrawlAsync(
+            _systemRepository,
+            navigationRepository: _navigationRepository,
+            bodyRepository: _bodyRepository).GetAwaiter().GetResult();
+
+        if (crawl.NextStep is { } nextStep)
+        {
+            OutwardNext = $"{nextStep.Action} → {nextStep.Target}";
+            OutwardNextReason = nextStep.Reason + (string.IsNullOrWhiteSpace(nextStep.Detail) ? "" : $" ({nextStep.Detail})");
+        }
+        else
+        {
+            var hops = crawl.Route.FirstOrDefault();
+            if (hops is not null)
+            {
+                OutwardNext = $"{hops.Kind} → {hops.SystemName}";
+                OutwardNextReason = hops.Reason;
+            }
+            else
+            {
+                OutwardNext = "No search in progress";
+                OutwardNextReason = "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
+            }
+        }
+
+        if (crawl.RecommendedGate is { } gate)
+        {
+            RecommendedGate = gate.SystemName;
+            RecommendedGateReasoning = gate.Reasoning;
+            OnPropertyChanged(nameof(HasRecommendedGate));
+        }
+        else
+        {
+            RecommendedGate = "No gate found";
+            RecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+            OnPropertyChanged(nameof(HasRecommendedGate));
+        }
 
         CurrentPositionText = guide.CurrentSystemName is not null
             ? $"You are at {guide.CurrentSystemName}"

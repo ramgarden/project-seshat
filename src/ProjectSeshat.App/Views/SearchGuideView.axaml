@@ -109,6 +109,20 @@
                         HorizontalScrollBarVisibility="Disabled"
                         VerticalScrollBarVisibility="Auto">
             <StackPanel Spacing="12">
+              <Border Background="#0E1B28" BorderBrush="#7FCFB0" BorderThickness="1" CornerRadius="6" Padding="16">
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="stage-label" Text="OUTWARD SURVEY — RECOMMENDED GATE" />
+                  <TextBlock Text="{Binding RecommendedGate}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding RecommendedGateReasoning}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
+                </StackPanel>
+              </Border>
+              <Border Background="#0E1B28" BorderBrush="#F2C14E" BorderThickness="1" CornerRadius="6" Padding="16">
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="stage-label" Text="NEXT MOVE — OUTWARD CRAWL" />
+                  <TextBlock Text="{Binding OutwardNext}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding OutwardNextReason}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" LineHeight="19" />
+                </StackPanel>
+              </Border>
               <Border Background="#06221A" BorderBrush="#2C8F6E" BorderThickness="1" CornerRadius="6" Padding="16">
                 <StackPanel Spacing="6">
                   <TextBlock Classes="stage-label" Text="CURRENT POSITION" />

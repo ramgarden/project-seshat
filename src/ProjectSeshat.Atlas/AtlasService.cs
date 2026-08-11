@@ -36,6 +36,42 @@ public sealed record FssTarget(string SystemName, int Signals, double? DistanceL
 /// <summary>A specific body the user should Surface-map with DSS.</summary>
 public sealed record DssTarget(string BodyName, string SystemName, double DistanceLs, string Reason);
 
+/// <summary>Classifies how a crawl hop moves the player.</summary>
+public enum CrawlHopKind
+{
+    /// <summary>A normal outward jump to a not-yet-searched system.</summary>
+    Jump,
+
+    /// <summary>A step through an already-charted system toward the frontier.</summary>
+    BackTrack
+}
+
+/// <summary>One step in the outward survey crawl (a jump plot entry).</summary>
+public sealed record CrawlHop(
+    CrawlHopKind Kind,
+    string SystemName,
+    double? DistanceLy,
+    string Reason,
+    GalacticCoordinates? ArriveAt);
+
+/// <summary>A single immediate instruction the player should act on now.</summary>
+public sealed record CrawlStep(string Action, string Target, string Reason, string? Detail = null);
+
+/// <summary>A recommended starting point for an outward survey, derived from current findings.</summary>
+public sealed record SearchGate(string SystemName, GalacticCoordinates Position, double Score, string Reasoning);
+
+/// <summary>
+/// The full state of the systematic outward survey: a recommended gate, the ordered outward
+/// route (nearest-unsearched-first with back-track steps when the local neighbourhood is
+/// exhausted), and a single immediate next step to act on.
+/// </summary>
+public sealed record OutwardCrawl(
+    SearchGate? RecommendedGate,
+    IReadOnlyList<CrawlHop> Route,
+    CrawlStep? NextStep,
+    string? CurrentSystemName,
+    GalacticCoordinates? CurrentPosition);
+
 /// <summary>Provides spatial and astronomical research operations for the atlas boundary.</summary>
 public sealed class AtlasService
 {
@@ -293,6 +329,333 @@ public sealed class AtlasService
             .ToList();
 
         return new SearchGuide(honk, fss, dss, honk.Count, fss.Count, dss.Count, currentSystemName, currentPosition);
+    }
+
+    /// <summary>
+    /// Recommends a starting system for a systematic outward survey, derived from current findings.
+    /// Candidates are scored by the density of unsearched neighbours, proximity to high-scoring
+    /// frontier regions, reachability from the commander now, and (when community data is present)
+    /// how little of the area the wider playerbase has already been in.
+    /// </summary>
+    public async Task<SearchGate?> RecommendSearchGateAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository = null,
+        ICommunityDiscoveryRepository? communityRepository = null,
+        double gateRadiusLy = 100,
+        double frontierReachLy = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var allSystems = await systemRepository.ListAsync(100000, cancellationToken);
+        var positioned = allSystems.Where(s => s.Position is not null).ToList();
+        if (positioned.Count == 0)
+        {
+            return null;
+        }
+
+        var unsearched = positioned.Where(s => s.SurveyState == SystemSurveyState.Unexplored).ToList();
+        // A search gate is a known base you radiate outward from, so only charted systems qualify.
+        var candidates = positioned.Where(s => s.SurveyState != SystemSurveyState.Unexplored).ToList();
+        if (candidates.Count == 0)
+        {
+            return null;
+        }
+
+        var reference = await ResolveReferenceAsync(systemRepository, navigationRepository, positioned, cancellationToken);
+
+        var regions = await RankUndiscoveredRegionsAsync(systemRepository, maxRegions: 40, cancellationToken: cancellationToken);
+
+        IReadOnlyList<CommunityDiscovery> community = Array.Empty<CommunityDiscovery>();
+        if (communityRepository is not null)
+        {
+            community = await communityRepository.ListRecentAsync(100000, cancellationToken);
+        }
+
+        SearchGate? best = null;
+        foreach (var candidate in candidates)
+        {
+            var position = candidate.Position!;
+            var unsearchedNearby = unsearched.Count(s =>
+                Distance(position, s.Position!) <= gateRadiusLy);
+
+            var frontierProximity = 0.0;
+            if (regions.Count > 0)
+            {
+                foreach (var region in regions)
+                {
+                    var distanceToRegion = Distance(position, region.Center);
+                    var contribution = region.Score / (1 + distanceToRegion / frontierReachLy);
+                    if (contribution > frontierProximity)
+                    {
+                        frontierProximity = contribution;
+                    }
+                }
+            }
+
+            var communityNearby = community.Count(d => d.Position is not null && Distance(position, d.Position!) <= gateRadiusLy);
+            var reachability = 1.0 / (1 + Distance(position, reference) / gateRadiusLy);
+
+            var score = (unsearchedNearby * 2.0) + frontierProximity - (communityNearby * 1.0) + (reachability * 0.5);
+            if (score <= 0)
+            {
+                continue;
+            }
+
+            var distanceFromCommander = Distance(position, reference);
+            var reasoning = $"{unsearchedNearby} unsearched neighbour{(unsearchedNearby == 1 ? "" : "s")} within {gateRadiusLy:0} Ly; " +
+                            $"frontier region score {frontierProximity:F1} within {frontierReachLy:0} Ly; " +
+                            $"{communityNearby} community sighting{(communityNearby == 1 ? "" : "s")} nearby; " +
+                            $"{distanceFromCommander:F0} Ly from commander.";
+
+            if (best is null || score > best.Score)
+            {
+                best = new SearchGate(candidate.Name, position, score, reasoning);
+            }
+        }
+
+        return best;
+    }
+
+    /// <summary>
+    /// Builds the systematic outward survey: a recommended gate (unless one is supplied), the ordered
+    /// route from the current position — nearest-unsearched-first, with back-track steps through charted
+    /// stars when the local neighbourhood is exhausted — and the single immediate next step.
+    /// </summary>
+    public async Task<OutwardCrawl> BuildOutwardCrawlAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository = null,
+        ICelestialBodyRepository? bodyRepository = null,
+        ICommunityDiscoveryRepository? communityRepository = null,
+        StarSystemId? gateSystemId = null,
+        double neighbourhoodRadiusLy = 60,
+        int maxHops = 40,
+        CancellationToken cancellationToken = default)
+    {
+        var allSystems = await systemRepository.ListAsync(100000, cancellationToken);
+        var positioned = allSystems.Where(s => s.Position is not null).ToList();
+        if (positioned.Count == 0)
+        {
+            return new OutwardCrawl(null, Array.Empty<CrawlHop>(), null, null, null);
+        }
+
+        var (currentSystemName, currentPosition, currentSystemId) =
+            await ResolveCurrentAsync(systemRepository, navigationRepository, cancellationToken);
+        var reference = currentPosition
+                        ?? (positioned.FirstOrDefault(s => s.Id == gateSystemId)?.Position)
+                        ?? Centroid(positioned.Select(s => s.Position!).ToList());
+
+        // When a gate is chosen it anchors the crawl origin.
+        StarSystem? gateSystem = null;
+        if (gateSystemId is { } gateId)
+        {
+            gateSystem = positioned.FirstOrDefault(s => s.Id == gateId);
+            if (gateSystem?.Position is not null)
+            {
+                reference = gateSystem.Position;
+            }
+        }
+
+        var recommendedGate = gateSystem is null
+            ? await RecommendSearchGateAsync(systemRepository, navigationRepository, communityRepository, cancellationToken: cancellationToken)
+            : null;
+
+        var unsearched = positioned.Where(s => s.SurveyState == SystemSurveyState.Unexplored).ToList();
+        var charted = positioned
+            .Where(s => s.SurveyState != SystemSurveyState.Unexplored && s.Position is not null)
+            .ToList();
+
+        var route = BuildCrawlRoute(reference, unsearched, charted, neighbourhoodRadiusLy, maxHops);
+
+        var nextStep = await BuildNextStep(
+            currentSystemId,
+            allSystems,
+            bodyRepository,
+            route,
+            cancellationToken);
+
+        return new OutwardCrawl(recommendedGate, route, nextStep, currentSystemName, currentPosition);
+    }
+
+    /// <summary>The immediate step to act on next, preferring in-system work before a jump.</summary>
+    public async Task<CrawlStep?> BuildOutwardNextStepAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository = null,
+        ICelestialBodyRepository? bodyRepository = null,
+        double neighbourhoodRadiusLy = 60,
+        CancellationToken cancellationToken = default)
+    {
+        var allSystems = await systemRepository.ListAsync(100000, cancellationToken);
+        var positioned = allSystems.Where(s => s.Position is not null).ToList();
+        if (positioned.Count == 0)
+        {
+            return null;
+        }
+
+        var (_, currentPosition, currentSystemId) =
+            await ResolveCurrentAsync(systemRepository, navigationRepository, cancellationToken);
+        var reference = currentPosition ?? Centroid(positioned.Select(s => s.Position!).ToList());
+
+        var unsearched = positioned.Where(s => s.SurveyState == SystemSurveyState.Unexplored).ToList();
+        var charted = positioned
+            .Where(s => s.SurveyState != SystemSurveyState.Unexplored && s.Position is not null)
+            .ToList();
+
+        var route = BuildCrawlRoute(reference, unsearched, charted, neighbourhoodRadiusLy, maxHops: 1);
+
+        return await BuildNextStep(currentSystemId, allSystems, bodyRepository, route, cancellationToken);
+    }
+
+    private static async Task<(string? SystemName, GalacticCoordinates? Position, StarSystemId? SystemId)> ResolveCurrentAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository,
+        CancellationToken cancellationToken)
+    {
+        if (navigationRepository is null)
+        {
+            return (null, null, null);
+        }
+
+        var state = await navigationRepository.GetAsync(cancellationToken);
+        if (state?.CurrentSystemId is not { } currentSystemId)
+        {
+            return (null, null, null);
+        }
+
+        var currentSystem = await systemRepository.FindByIdAsync(currentSystemId, cancellationToken);
+        return (currentSystem?.Name, currentSystem?.Position, currentSystemId);
+    }
+
+    private static async Task<GalacticCoordinates> ResolveReferenceAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository,
+        IReadOnlyList<StarSystem> positioned,
+        CancellationToken cancellationToken)
+    {
+        if (navigationRepository is not null)
+        {
+            var state = await navigationRepository.GetAsync(cancellationToken);
+            if (state?.CurrentSystemId is { } currentSystemId)
+            {
+                var currentSystem = await systemRepository.FindByIdAsync(currentSystemId, cancellationToken);
+                if (currentSystem?.Position is not null)
+                {
+                    return currentSystem.Position;
+                }
+            }
+        }
+
+        return positioned.Count > 0
+            ? Centroid(positioned.Select(s => s.Position!).ToList())
+            : new GalacticCoordinates(0, 0, 0);
+    }
+
+    private static IReadOnlyList<CrawlHop> BuildCrawlRoute(
+        GalacticCoordinates reference,
+        IReadOnlyList<StarSystem> unsearched,
+        IReadOnlyList<StarSystem> charted,
+        double neighbourhoodRadiusLy,
+        int maxHops)
+    {
+        var route = new List<CrawlHop>();
+        var remaining = unsearched.OrderBy(s => Distance(reference, s.Position!)).ToList();
+        var availableCharted = charted.Where(s => s.Position is not null).ToList();
+
+        var cursor = reference;
+        while (remaining.Count > 0 && route.Count < maxHops)
+        {
+            var next = remaining
+                .OrderBy(s => Distance(cursor, s.Position!))
+                .First();
+
+            var distance = Distance(cursor, next.Position!);
+            if (distance <= neighbourhoodRadiusLy)
+            {
+                // A not-yet-searched star is right here: take the normal outward hop.
+                route.Add(new CrawlHop(CrawlHopKind.Jump, next.Name, distance, "Nearest unsearched star within reach", next.Position));
+                cursor = next.Position!;
+                remaining.Remove(next);
+                continue;
+            }
+
+            // All stars in the local neighbourhood are searched. Back-track through a charted
+            // star that lies on the way toward the nearest still-unsearched one.
+            var target = next;
+            var waypoint = availableCharted
+                .Where(w => Distance(cursor, w.Position!) <= neighbourhoodRadiusLy * 2)
+                .Where(w => Distance(w.Position!, target.Position!) < Distance(cursor, target.Position!))
+                .OrderBy(w => Distance(cursor, w.Position!) + Distance(w.Position!, target.Position!))
+                .FirstOrDefault();
+
+            if (waypoint is not null)
+            {
+                route.Add(new CrawlHop(
+                    CrawlHopKind.BackTrack,
+                    waypoint.Name,
+                    Distance(cursor, waypoint.Position!),
+                    $"All nearby stars searched — head via {waypoint.Name} toward {target.Name}",
+                    waypoint.Position));
+                cursor = waypoint.Position!;
+                availableCharted.Remove(waypoint);
+                continue;
+            }
+
+            // No charted stepping stone: stretch jump straight to the next unsearched star.
+            route.Add(new CrawlHop(CrawlHopKind.Jump, target.Name, distance, "No back-track waypoint — long jump to nearest unsearched", target.Position));
+            cursor = target.Position!;
+            remaining.Remove(target);
+        }
+
+        return route;
+    }
+
+    private async Task<CrawlStep?> BuildNextStep(
+        StarSystemId? currentSystemId,
+        IReadOnlyList<StarSystem> allSystems,
+        ICelestialBodyRepository? bodyRepository,
+        IReadOnlyList<CrawlHop> route,
+        CancellationToken cancellationToken)
+    {
+        // In-system work always wins: honk → FSS → DSS before leaving.
+        if (currentSystemId is { } currentId)
+        {
+            var current = allSystems.FirstOrDefault(s => s.Id == currentId);
+            if (current is not null && current.Position is not null)
+            {
+                if (current.SurveyState == SystemSurveyState.Unexplored)
+                {
+                    return new CrawlStep("Honk", current.Name, "Arrived but not yet discovery-scanned");
+                }
+
+                if (current.SurveyState == SystemSurveyState.Honked && current.NonBodySignals > 0)
+                {
+                    return new CrawlStep(
+                        "FSS", current.Name, "Honk detected signals — resolve them", current.SignalTypes);
+                }
+
+                if (bodyRepository is not null && await HasDssWorkAsync(currentId, bodyRepository, cancellationToken) is { } dssBody)
+                {
+                    return new CrawlStep("DSS", dssBody.Name, $"DSS in {current.Name}", DssReason(dssBody));
+                }
+            }
+        }
+
+        var hop = route.FirstOrDefault();
+        if (hop is not null)
+        {
+            return hop.Kind == CrawlHopKind.BackTrack
+                ? new CrawlStep("Back-track", hop.SystemName, hop.Reason)
+                : new CrawlStep("Jump", hop.SystemName, hop.Reason);
+        }
+
+        return null;
+    }
+
+    private static async Task<CelestialBody?> HasDssWorkAsync(
+        StarSystemId systemId,
+        ICelestialBodyRepository bodyRepository,
+        CancellationToken cancellationToken)
+    {
+        var dss = await bodyRepository.ListDssCandidatesAsync(500, cancellationToken);
+        return dss.FirstOrDefault(d => d.SystemId == systemId);
     }
 
     private static string DssReason(CelestialBody body)

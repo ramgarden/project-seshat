@@ -101,15 +101,33 @@
 
 > Note: milestone provides the testable ingestion foundation; live-stream wiring is network-only and not exercisable in this sandbox.
 
-## Milestone 1.9 — On-screen guidance overlay & one-key jump
+## Milestone 1.9 — Systematic outward search (Core guidance)
 
-Goal: keep guiding the player toward the next step even when they're playing on a single screen with sound off — show the next action *over the game*, and let them execute it with one keypress.
+Goal: turn the guided search into a **methodical outward survey** computed in `AtlasService` (fully unit-testable offline) — the app proposes a gate, walks the player outward star-by-star, and always knows the next hop.
 
-- [ ] Show the guided step as a small always-on-top, click-through overlay over the game window (topmost borderless Avalonia window; click-through via Win32 `WS_EX_TRANSPARENT`/`WS_EX_LAYERED` interop). Text mirrors the existing Search Guide tiers: `Jump to X`, `Honk`, `FSS for <signals>`, `DSS <body>`, or `Nothing interesting — jump to next nearest star`.
-- [ ] Optional voice pings (Windows TTS via `SpeechSynthesizer`) speaking each step aloud for sound-off play.
+- [x] Define an **outward crawl**: starting from a chosen gate, explore systems ring-by-ring by distance. Priority stays the existing pipeline — `Honk` (rescan), `FSS` for interesting signals, `DSS` for worth-mapping bodies — but the route is always **nearest-unsearched-first from the current position** so the player naturally radiates outward.
+- [x] When the current system has **nothing left to FSS or DSS**, automatically advance the target to the **next nearest star not yet searched** (the honk route already scores this; make it explicit as the "next hop").
+- [x] When **all stars in the surveyed neighbourhood are searched**, **back-track**: target a nearby (already charted) star that lies on the way toward the nearest still-unsearched star, so the player returns along the frontier instead of jumping in a straggly line — then resume outward once they arrive.
+- [x] **Propose a good starting star**: expose a "recommended search gate" computed from current findings — combine the frontier/region score (`RankUndiscoveredRegionsAsync`), the density of unsearched neighbours, distance from the commander (wants to be reachable now), and community data (low community presence = fresher ground). Show it with its score and the reasoning, selectable as the crawl origin.
+- [x] Expose the crawl state (gate, current hop, next hop, reasoning) through Core contracts; the Search Guide page renders the recommended gate and the immediate next move, refreshing on journal import.
+
+## Milestone 1.10 — On-screen guidance overlay (single-screen, sound-off)
+
+Goal: show the next action as a transparent subtitle **over the game** so the player never needs to alt-tab. Depends on 1.9's crawl state; window/voice behaviour needs manual on-device validation.
+
+- [ ] Transparent subtitle window **over the game**: always-on-top, click-through (Win32 `WS_EX_TRANSPARENT`/`WS_EX_LAYERED`), bottom-of-screen caption style. Renders the live next action from 1.9: `Honk here`, `FSS <system> for <signals>`, `DSS <body>`, `Jump to <star>` (nearest unsearched), `Back-track to <star>`, or `Nothing interesting — jump to <next star>`.
+- [ ] "Proposed search gate" picker in the app UI: shows the recommended starting star with score + reasoning from 1.9, clickable to set the crawl origin.
+- [ ] If keybind automation can't run (no bindings found / refused), the overlay's job is simply to **name the star** so the player picks it from the in-game Navigation panel's nearby list — no hotkey required.
+- [ ] Optional voice pings (Windows TTS via `SpeechSynthesizer`) speaking each step for sound-off play.
+- [ ] Keep text/transcript derivation testable offline: overlay copy and TTS transcript come from the 1.9 Core contracts.
+
+## Milestone 1.11 — Keybinding auto-targeting
+
+Goal: use the commander's actual ED bindings so the player only engages the jump. Highest device dependency — needs an ED install + keybindings file to verify.
+
 - [ ] Read the commander's ED key-bindings file (`Options\Bindings\*.binds`) to discover the actual keys for target selection / hyperjump rather than hardcoding bindings.
-- [ ] One-key jump: a global hotkey + overlay button that targets the next route star and triggers hyperjump activation in-game (hardware/synthetic key input to the game window), so the player just presses one key to jump to the next nearest honk target.
-- [ ] Keep the guidance source testable offline: overlay text and TTS transcript derive from the existing `SearchGuide`/`AtlasService` tiers via Core contracts; keyboard/window automation needs manual on-device checks.
+- [ ] **Auto-targeting**: synthesize the target-selection key for the next route star, and charge the hyperjump, using their real keys — so the player just confirms the jump.
+- [ ] Graceful degradation: if no bindings are found or the game isn't focused, fall back to naming the star in the 1.10 overlay.
 
 ## Next
 

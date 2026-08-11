@@ -93,6 +93,208 @@ public sealed class AtlasServiceTests
     }
 
     [Fact]
+    public async Task OutwardCrawl_OrdersNearestUnsearchedFirst()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        systems.Add(new StarSystem(new StarSystemId(2), "NEAR", new GalacticCoordinates(0, 0, 100), SystemSurveyState.Unexplored));
+        systems.Add(new StarSystem(new StarSystemId(3), "FAR", new GalacticCoordinates(0, 0, 1000), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
+
+        Assert.Equal(2, crawl.Route.Count);
+        Assert.Equal("NEAR", crawl.Route[0].SystemName);
+        Assert.Equal("FAR", crawl.Route[1].SystemName);
+        Assert.Equal("Jump", crawl.NextStep?.Action);
+        Assert.Equal("NEAR", crawl.NextStep?.Target);
+        Assert.Equal("HERE", crawl.CurrentSystemName);
+        Assert.NotNull(crawl.RecommendedGate);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_AutoAdvances_WhenCurrentSystemHasNoWork()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        systems.Add(new StarSystem(new StarSystemId(2), "NEXT", new GalacticCoordinates(0, 0, 50), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
+
+        // Nothing left to FSS/DSS here → the guide should tell us to jump on.
+        Assert.Equal("Jump", crawl.NextStep?.Action);
+        Assert.Equal("NEXT", crawl.NextStep?.Target);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_PrefersInSystemHonkBeforeLeaving()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.Unexplored);
+        systems.Add(here);
+        systems.Add(new StarSystem(new StarSystemId(2), "NEXT", new GalacticCoordinates(0, 0, 50), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
+
+        Assert.Equal("Honk", crawl.NextStep?.Action);
+        Assert.Equal("HERE", crawl.NextStep?.Target);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_PrefersFssWorkInCurrentSystem()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.Honked, NonBodySignals: 3, SignalTypes: "Biological");
+        systems.Add(here);
+        systems.Add(new StarSystem(new StarSystemId(2), "NEXT", new GalacticCoordinates(0, 0, 50), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
+
+        Assert.Equal("FSS", crawl.NextStep?.Action);
+        Assert.Equal("HERE", crawl.NextStep?.Target);
+        Assert.Equal("Biological", crawl.NextStep?.Detail);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_PrefersDssWorkInCurrentSystem()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        var bodies = new InMemoryBodyRepository();
+        bodies.Add(new CelestialBody(
+            new CelestialBodyId(Guid.NewGuid()),
+            here.Id,
+            "HERE 1",
+            BodyKind.Planet,
+            null,
+            "Earthlike body",
+            null,
+            500,
+            ScanStatus.FssScanned,
+            WorthDss: true));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, bodyRepository: bodies, navigationRepository: nav);
+
+        Assert.Equal("DSS", crawl.NextStep?.Action);
+        Assert.Equal("HERE 1", crawl.NextStep?.Target);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_BackTracksThroughChartedStar_WhenNeighbourhoodExhausted()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        // Charted stepping stones between here and the distant frontier.
+        systems.Add(new StarSystem(new StarSystemId(2), "ONWAY", new GalacticCoordinates(0, 0, 50), SystemSurveyState.FssScanned));
+        // The only unsearched system is far beyond the local neighbourhood.
+        systems.Add(new StarSystem(new StarSystemId(3), "FRONTIER", new GalacticCoordinates(0, 0, 1000), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav, neighbourhoodRadiusLy: 60);
+
+        Assert.NotEmpty(crawl.Route);
+        Assert.Equal(CrawlHopKind.BackTrack, crawl.Route[0].Kind);
+        Assert.Equal("ONWAY", crawl.Route[0].SystemName);
+        Assert.Equal("Back-track", crawl.NextStep?.Action);
+        Assert.Equal("ONWAY", crawl.NextStep?.Target);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_LongJumps_WhenNoChartedWaypointExists()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        // No charted stepping stone: must stretch-jump straight to the frontier.
+        systems.Add(new StarSystem(new StarSystemId(3), "FRONTIER", new GalacticCoordinates(0, 0, 1000), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav, neighbourhoodRadiusLy: 60);
+
+        Assert.Equal(CrawlHopKind.Jump, crawl.Route[0].Kind);
+        Assert.Equal("FRONTIER", crawl.Route[0].SystemName);
+        Assert.Equal("Jump", crawl.NextStep?.Action);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_NoNextStep_WhenEverythingIsSearched()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        systems.Add(new StarSystem(new StarSystemId(2), "SEARCHED", new GalacticCoordinates(0, 0, 100), SystemSurveyState.FssScanned));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
+
+        Assert.Empty(crawl.Route);
+        Assert.Null(crawl.NextStep);
+    }
+
+    [Fact]
+    public async Task SearchGate_PrefersDenseUnsearchedNeighbourhood()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HOME BASE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        // A cluster of unsearched systems right next to the base.
+        systems.Add(new StarSystem(new StarSystemId(2), "UNSEARCHED A", new GalacticCoordinates(0, 0, 60), SystemSurveyState.Unexplored));
+        systems.Add(new StarSystem(new StarSystemId(3), "UNSEARCHED B", new GalacticCoordinates(0, 0, 70), SystemSurveyState.Unexplored));
+        systems.Add(new StarSystem(new StarSystemId(4), "UNSEARCHED C", new GalacticCoordinates(0, 0, 80), SystemSurveyState.Unexplored));
+        // A far, isolated charted base with no local unsearched systems.
+        systems.Add(new StarSystem(new StarSystemId(5), "LONELY BASE", new GalacticCoordinates(5000, 0, 0), SystemSurveyState.FssScanned));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var gate = await atlas.RecommendSearchGateAsync(systems, navigationRepository: nav);
+
+        Assert.NotNull(gate);
+        Assert.Equal("HOME BASE", gate!.SystemName);
+        Assert.Contains("unsearched", gate.Reasoning);
+    }
+
+    [Fact]
+    public async Task SearchGate_ExcludesUnsearchedSystemsAsCandidates()
+    {
+        var systems = new InMemorySystemRepository();
+        systems.Add(new StarSystem(new StarSystemId(1), "BASE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned));
+        systems.Add(new StarSystem(new StarSystemId(2), "VIRGIN", new GalacticCoordinates(0, 0, 30), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), new StarSystemId(1), DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var gate = await atlas.RecommendSearchGateAsync(systems, navigationRepository: nav);
+
+        Assert.NotNull(gate);
+        Assert.Equal("BASE", gate!.SystemName);
+    }
+
+    [Fact]
     public async Task SearchGuide_PlotsHonkRouteFromCurrentPosition()
     {
         var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);

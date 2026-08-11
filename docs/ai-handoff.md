@@ -126,6 +126,7 @@ Repository contracts accept a `CancellationToken`; persistence implementations m
 - `GetSurveySnapshotAsync` — a spatial snapshot (reference coordinates, surveyed systems, surveyed cells).
 - `RankUndiscoveredRegionsAsync` — ranks largely uncharted cells near the surveyed frontier (Milestone 1.0).
 - `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Search Guide page (Milestone 1.1).
+- `BuildOutwardCrawlAsync` / `RecommendSearchGateAsync` — the **systematic outward survey** (Milestone 1.9): an outward crawl from a recommended gate, nearest-unsearched-first, auto-advancing the hop when a system has nothing left to FSS/DSS, and back-tracking through charted stars when the local neighbourhood is exhausted. Returns an `OutwardCrawl` (recommended `SearchGate` + score/reasoning, ordered `CrawlHop` route, and a single `CrawlStep` next move). The Search Guide page shows the gate and next move; both refresh on journal import. Gate scoring favours charted systems with dense unsearched neighbours, frontier proximity, reachability, and low community footprint.
 
 Presentation lives in `src/ProjectSeshat.App/ViewModels/SearchGuideViewModel.cs` (guide lists + "why" text) and `Views/SearchGuideView.axaml`, with the galaxy map in `GalaxyMapViewModel.cs` / `GalaxyMapView.axaml`. `MainWindowViewModel` wires both pages into navigation (Search Guide is the landing page) and refreshes them whenever journal data is imported.
 
@@ -170,7 +171,7 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (63 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (73 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
@@ -184,7 +185,7 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). The current candidate milestone is **Milestone 1.9 — On-screen guidance overlay & one-key jump**: an always-on-top click-through overlay + optional voice pings that show the next guided step (jump → honk → FSS → DSS) over the game window, plus a global hotkey that targets and triggers the jump to the next nearest honk target by reading the player's ED key bindings. Other next steps:
+Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestone 1.9 (systematic outward search) is implemented** in `AtlasService` (`BuildOutwardCrawlAsync`, `RecommendSearchGateAsync`) and surfaced on the Search Guide page. The next candidate is **Milestone 1.10 — On-screen guidance overlay**: a transparent click-through subtitle over the game naming each step (from the 1.9 crawl `CrawlStep`) + optional Windows TTS voice pings + a gate picker, followed by **1.11 Keybinding auto-targeting** (reads the player's ED `*.binds` and synthesizes target/jump input, falling back to naming the star in the overlay). The crawl/route/back-track/gate logic sits behind Core contracts; only the window/keyboard automation needs on-device checks. Other next steps:
 
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).
