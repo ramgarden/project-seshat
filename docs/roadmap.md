@@ -90,9 +90,32 @@
 - [x] Flag a region as charted once systems are surveyed inside it.
 - [x] Add an Atlas Survey listing view; the galaxy map draws regions from the persisted survey.
 
+## Milestone 1.8 — Community data foundation (EDDN + Spansh)
+
+- [x] Add `ProjectSeshat.Community` with an EDDN message parser, injectable transport + listener (ZeroMQ via NetMQ).
+- [x] Add a `CommunityService` (start/stop, live event counts) and a dashboard toggle for the EDDN stream.
+- [x] Add a Spansh HTTP route service for jump/coverage plotting.
+- [x] Unit tests for the parser, listener flow, and Spansh route parsing.
+- [x] Monitor-based connection state: the EDDN toggle now shows *real* relay connectivity (via a NetMQ monitor socket) instead of "started = connected", and transport failures surface as text instead of crashing.
+- [x] Persist community discoveries as a **bounded, deduplicated summary**: `CommunityDiscoveries` rows keyed by system name, batched from memory on a timer (and on stop), pruned to 250,000 rows / 180 days so disk stays constant. The dashboard shows the summary count and recent systems.
+
+> Note: milestone provides the testable ingestion foundation; live-stream wiring is network-only and not exercisable in this sandbox.
+
+## Milestone 1.9 — On-screen guidance overlay & one-key jump
+
+Goal: keep guiding the player toward the next step even when they're playing on a single screen with sound off — show the next action *over the game*, and let them execute it with one keypress.
+
+- [ ] Show the guided step as a small always-on-top, click-through overlay over the game window (topmost borderless Avalonia window; click-through via Win32 `WS_EX_TRANSPARENT`/`WS_EX_LAYERED` interop). Text mirrors the existing Search Guide tiers: `Jump to X`, `Honk`, `FSS for <signals>`, `DSS <body>`, or `Nothing interesting — jump to next nearest star`.
+- [ ] Optional voice pings (Windows TTS via `SpeechSynthesizer`) speaking each step aloud for sound-off play.
+- [ ] Read the commander's ED key-bindings file (`Options\Bindings\*.binds`) to discover the actual keys for target selection / hyperjump rather than hardcoding bindings.
+- [ ] One-key jump: a global hotkey + overlay button that targets the next route star and triggers hyperjump activation in-game (hardware/synthetic key input to the game window), so the player just presses one key to jump to the next nearest honk target.
+- [ ] Keep the guidance source testable offline: overlay text and TTS transcript derive from the existing `SearchGuide`/`AtlasService` tiers via Core contracts; keyboard/window automation needs manual on-device checks.
+
 ## Next
 
+- [ ] Plot Spansh routes into the search guide jump plotter.
 - [ ] Filtering and richer detail on the guided search.
+- [ ] Surface "recently discovered / uncharted" views fed from the `CommunityDiscoveries` summary (Spansh/EDDN revisit).
 
 ## Quality
 

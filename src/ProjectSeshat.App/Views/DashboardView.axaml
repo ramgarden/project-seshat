@@ -17,6 +17,30 @@
       <Setter Property="FontWeight" Value="SemiBold" />
       <Setter Property="LetterSpacing" Value="1.4" />
     </Style>
+    <Style Selector="Button.toggle">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="Padding" Value="12,7" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="HorizontalAlignment" Value="Left" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.toggle:pointerover">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.toggle:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.toggle:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.toggle:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
   </UserControl.Styles>
 
   <Grid RowDefinitions="*,Auto" Margin="0,0,12,0">
@@ -86,6 +110,34 @@
         <TextBlock Text="{Binding JournalPathStatus}" Foreground="#83B8D5" FontSize="13" TextWrapping="Wrap" />
         <TextBlock Text="{Binding LoadingProgress}" Foreground="#7DAAC4" FontSize="13" />
         <TextBlock Text="{Binding ActiveFileName}" Foreground="#A8D4EA" FontSize="13" TextWrapping="Wrap" />
+
+        <Border Height="1" Background="#1A4D67" Margin="0,4" />
+
+        <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding CommunityAvailable}">
+          <Ellipse Width="10" Height="10" Fill="{Binding CommunityStatusColor}" VerticalAlignment="Center" />
+          <TextBlock Classes="section-label" Text="COMMUNITY DATA" VerticalAlignment="Center" />
+          <TextBlock Text="{Binding CommunityStatusText}" Foreground="#D2EAF7" FontSize="13" VerticalAlignment="Center" TextWrapping="Wrap" />
+          <Button Classes="toggle" Command="{Binding ToggleCommunityCommand}">
+            <TextBlock Text="{Binding CommunityToggleText}" />
+          </Button>
+        </StackPanel>
+        <TextBlock Text="{Binding CommunityDiscoverySummary}" Foreground="#7FCFB0" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding CommunityAvailable}" />
+        <TextBlock Text="Stream live, crowdsourced discoveries from EDDN to see where the wider playerbase is and has been — invaluable for the Raxxla hunt." Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding CommunityAvailable}" />
+        <ItemsControl ItemsSource="{Binding CommunityRecentDiscoveries}" IsVisible="{Binding HasCommunityDiscoveries}">
+          <ItemsControl.ItemsPanel>
+            <ItemsPanelTemplate>
+              <WrapPanel />
+            </ItemsPanelTemplate>
+          </ItemsControl.ItemsPanel>
+          <ItemsControl.ItemTemplate>
+            <DataTemplate>
+              <Border Background="#0A1B2B" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="3" Padding="8,4" Margin="0,0,6,6">
+                <TextBlock Text="{Binding}" Foreground="#A8D4EA" FontSize="12" />
+              </Border>
+            </DataTemplate>
+          </ItemsControl.ItemTemplate>
+        </ItemsControl>
+        <TextBlock Text="{Binding CommunityErrorText}" Foreground="#FF8F8F" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasCommunityError}" />
       </StackPanel>
     </Border>
   </Grid>

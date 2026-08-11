@@ -10,6 +10,10 @@ public sealed class ProjectSeshatDbContext : DbContext
         position => position == null ? null : ToPositionString(position),
         value => value == null ? null : ParseCoordinates(value));
 
+    private static readonly ValueConverter<DateTimeOffset, DateTime> UtcDateTimeOffsetConverter = new(
+        value => value.UtcDateTime,
+        value => new DateTimeOffset(value, TimeSpan.Zero));
+
     public ProjectSeshatDbContext(DbContextOptions<ProjectSeshatDbContext> options)
         : base(options)
     {
@@ -34,6 +38,8 @@ public sealed class ProjectSeshatDbContext : DbContext
     public DbSet<NavigationState> NavigationStates => Set<NavigationState>();
 
     public DbSet<SurveyRegion> SurveyRegions => Set<SurveyRegion>();
+
+    public DbSet<CommunityDiscovery> CommunityDiscoveries => Set<CommunityDiscovery>();
 
     protected override void OnModelCreating(ModelBuilder modelBuilder)
     {
@@ -166,6 +172,21 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Center).HasColumnType("TEXT").HasConversion(PositionConverter);
             entity.HasIndex(x => new { x.CellX, x.CellY, x.CellZ }).IsUnique();
             entity.Property(x => x.LastUpdatedAt).IsRequired();
+        });
+
+        modelBuilder.Entity<CommunityDiscovery>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new CommunityDiscoveryId(value));
+            entity.Property(x => x.SystemName).IsRequired();
+            entity.HasIndex(x => x.SystemName).IsUnique();
+            entity.Property(x => x.Position).HasColumnType("TEXT").HasConversion(PositionConverter);
+            // Store as UTC datetime ticks so SQLite ordering/pruning translate to SQL.
+            entity.Property(x => x.FirstReportedAt).HasConversion(UtcDateTimeOffsetConverter);
+            entity.Property(x => x.LastReportedAt).HasConversion(UtcDateTimeOffsetConverter);
+            entity.HasIndex(x => x.LastReportedAt);
         });
     }
 

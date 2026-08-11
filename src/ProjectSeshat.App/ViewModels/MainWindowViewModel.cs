@@ -1,6 +1,7 @@
 using System;
 using System.Windows.Input;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Investigations;
 using ProjectSeshat.Journals;
@@ -33,7 +34,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         InvestigationService? investigationService = null,
         AtlasService? atlasService = null,
         JournalWatcher? journalWatcher = null,
-        ISurveyRegionRepository? surveyRegionRepository = null)
+        ISurveyRegionRepository? surveyRegionRepository = null,
+        CommunityService? communityService = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -42,7 +44,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             journalPathResolver,
             celestialBodyRepository,
             codexEntryRepository,
-            observationRepository);
+            observationRepository,
+            communityService);
 
         SearchGuide = new SearchGuideViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
         GalaxyMap = new GalaxyMapViewModel(atlasService, starSystemRepository, navigationRepository, surveyRegionRepository);

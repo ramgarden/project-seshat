@@ -173,6 +173,56 @@ public sealed class RepositoryTests
         Assert.Single(await repository.ListWithPositionAsync(10));
     }
 
+    [Fact]
+    public async Task CommunityDiscoveryRepository_DeduplicatesAndPrunes()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var repository = new CommunityDiscoveryRepository(context);
+
+        await repository.RecordSightingsAsync(new[]
+        {
+            new CommunitySighting("LHS 3447", new GalacticCoordinates(-23.4, -72.4, -35.3), DateTimeOffset.UtcNow),
+            new CommunitySighting("LHS 3447", new GalacticCoordinates(-23.4, -72.4, -35.3), DateTimeOffset.UtcNow.AddSeconds(5)),
+            new CommunitySighting("Sol", null, DateTimeOffset.UtcNow)
+        });
+
+        Assert.Equal(2, await repository.CountAsync());
+
+        var recent = await repository.ListRecentAsync(10);
+        Assert.Equal(2, recent.Count);
+        var lhs = recent.Single(d => d.SystemName == "LHS 3447");
+        Assert.Equal(2, lhs.ReportCount);
+        Assert.NotNull(lhs.Position);
+
+        await repository.RecordSightingsAsync(new[] { new CommunitySighting("Sirius", null, DateTimeOffset.UtcNow.AddDays(200)) });
+        await repository.PruneAsync(2, TimeSpan.FromDays(180));
+
+        Assert.Equal(2, await repository.CountAsync());
+    }
+
+    [Fact]
+    public async Task CommunityDiscoveryRepository_ListsNewestFirst()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var repository = new CommunityDiscoveryRepository(context);
+
+        await repository.RecordSightingsAsync(new[]
+        {
+            new CommunitySighting("Old", null, DateTimeOffset.UtcNow.AddDays(-10)),
+            new CommunitySighting("New", null, DateTimeOffset.UtcNow)
+        });
+
+        var recent = await repository.ListRecentAsync(10);
+        Assert.Equal("New", recent[0].SystemName);
+        Assert.Equal("Old", recent[1].SystemName);
+    }
+
     private static ProjectSeshatDbContext CreateContext(SqliteConnection connection)
     {
         var options = new DbContextOptionsBuilder<ProjectSeshatDbContext>()

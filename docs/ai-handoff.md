@@ -45,6 +45,24 @@ The **Galaxy Map** is its own top-level tab (`GalaxyMapViewModel` / `GalaxyMapVi
 
 `AtlasService.RefreshSurveyRegionsAsync` recomputes the frontier regions and persists them as `SurveyRegion` rows (EF table `SurveyRegions`, added via the `AddSurveyRegions` migration) keyed by galactic grid cell, so the survey survives restarts. Regions are flagged `Surveyed` once systems are charted inside their cell. This runs automatically on journal import and on the Atlas Survey page. The **Atlas Survey** page (`SurveyViewModel` / `SurveyView`) lists the regions with rank, distance, score, nearby charted systems, and status; the **Galaxy Map** draws its region markers from this persisted source of truth (`ISurveyRegionRepository.ListUnsurveyedAsync`) instead of recomputing live.
 
+### Community data (EDDN / Spansh)
+
+`ProjectSeshat.Community` ingests crowdsourced data:
+- `EddnMessageParser` normalizes EDDN journal-schema JSON (honoring the `message` envelope) into `EddnEvent` records (FSDJump position/honk, Scan body details).
+- `IEddnTransport` abstracts the stream; `NetMqEddnTransport` subscribes to the EDDN ZeroMQ relay (`tcp://eddn.edcd.io:9500`) via NetMQ; `EddnListener` parses each frame and raises `EventReceived`.
+- `CommunityService` coordinates start/stop and exposes `IsConnected` / `ReceivedCount`; the Dashboard has an EDDN toggle + live count.
+- `SpanshRouteService` plots jump routes against the Spansh public HTTP API into `RouteStop` legs.
+- Discoveries are summarized (deduped by system name, bounded/pruned) into the `CommunityDiscoveries` EF table via `ICommunityDiscoveryRepository`.
+
+The **EDDN transport is crash-hardened**: `NetMqEddnTransport` reads the full multipart message (an empty subscription-topic frame plus the JSON payload), catches connect/read failures, and raises `IEddnTransport.TransportError` instead of an exception escaping on the poller thread. It also attaches a NetMQ monitor socket and raises `IEddnTransport.ConnectionChanged`, so `CommunityService.IsConnected` reflects **real** relay connectivity rather than "start requested" — the dashboard toggle shows actual state and transport failures as red text. Failures flow up through `EddnListener.TransportErrorReceived` → `CommunityService.LastError`, which the Dashboard surfaces in red — so a live-stream/network failure can never crash the app. `EddnMessageParser.Parse` tolerates malformed JSON (returns null) rather than throwing.
+
+Community discoveries are persisted as a **bounded, deduplicated summary** — not raw EDDN. `CommunityService` buffers system sightings in memory and flushes them in batches to `ICommunityDiscoveryRepository` (EF `CommunityDiscoveries` table, keyed by a unique `SystemName`, `AddCommunityDiscoveries` migration) on a 10-second timer and on stop; then it prunes to 250,000 rows and 180 days of age, so the local SQLite database stays constant even at full relay volume. The dashboard shows the summary (`CommunityDiscoveryCount`) and the most recently reported systems (`CommunityRecentDiscoveries`, a wrap of name chips). Persisting raw EDDN is deliberately avoided.
+
+A file logger (`SeshatLog`, `src/ProjectSeshat.App/SeshatLog.cs`) writes timestamped lines plus every unhandled/unobserved exception to `%APPDATA%\ProjectSeshat\logs\seshat.log`; it installs AppDomain + TaskScheduler crash handlers on startup. The EDDN toggle button uses the standard action-button palette with explicit `/template/ ContentPresenter` hover/pressed overrides so the Fluent theme's default layer can't wash it out.
+
+
+The tests exercise the parser, the listener flow, and Spansh parsing with injected fakes, so the unit-test suite runs offline. Live-stream connectivity and persisting EDDN discoveries into the survey/systems store are the planned follow-ups (network-only, not exercisable in this sandbox).
+
 ### Galactic sky-map
 
 `ProjectSeshat.App/Controls/AtlasSkyMapControl.cs` is a custom, interactive 3D projection control rendered with Avalonia's `DrawingContext`. It draws surveyed systems (cyan), ranked undiscovered regions (green, from `AtlasService.RankUndiscoveredRegionsAsync`), the commander's current position (gold), and the next jump target (red, a line back to center). Drag rotates the view, scroll zooms, and points are drawn far-to-near for a depth cue. `GalaxyMapViewModel.Refresh` builds `SkyMapPoints` (a `SkyPoint`/`SkyPointKind` collection) and the control's `Points` binding re-renders automatically; the map refreshes on live journal import.
@@ -74,7 +92,8 @@ Before changing anything, run `git status --short`: work may be intentionally un
 | `ProjectSeshat.Codex` | Discovery and codex knowledge | Codex entries modeled and persisted. |
 | `ProjectSeshat.Observatory` | Observation analysis | Observations modeled and persisted. |
 | `ProjectSeshat.Investigations` | Evidence-based investigations | `InvestigationService` captures evidence attached to research threads. |
-| `ProjectSeshat.Tests` | Unit and integration tests | Core records, SQLite repository round trips, journal reader, and Atlas search guide. |
+| `ProjectSeshat.Community` | Crowdsourced galactic data | EDDN message parser + livestream listener (NetMQ), Spansh route service, and a start/stop `CommunityService`. |
+| `ProjectSeshat.Tests` | Unit and integration tests | Core records, SQLite repository round trips, journal reader, Atlas guide/map/survey, and community parsing. |
 
 ## Architectural rules
 
@@ -95,7 +114,7 @@ The Core API is located under `src/ProjectSeshat.Core/Domain` and `src/ProjectSe
 - `NavigationState.cs` — the commander's current system (for jump-plotting).
 - `SurveyRegion.cs` — persisted frontier/uncharted regions keyed by grid cell (the source-of-truth survey).
 - `JournalImportTracker.cs` — import de-duplication by content fingerprint.
-- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`, `ISurveyRegionRepository`.
+- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`, `ISurveyRegionRepository`, `ICommunityDiscoveryRepository`.
 
 Repository contracts accept a `CancellationToken`; persistence implementations must follow these public contracts.
 
@@ -151,7 +170,7 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (37 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (63 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
@@ -165,7 +184,7 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the `Next` section in [roadmap.md](roadmap.md). Current candidate next steps:
+Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). The current candidate milestone is **Milestone 1.9 — On-screen guidance overlay & one-key jump**: an always-on-top click-through overlay + optional voice pings that show the next guided step (jump → honk → FSS → DSS) over the game window, plus a global hotkey that targets and triggers the jump to the next nearest honk target by reading the player's ED key bindings. Other next steps:
 
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).

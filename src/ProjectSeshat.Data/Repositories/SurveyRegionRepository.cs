@@ -40,14 +40,15 @@ public sealed class SurveyRegionRepository : ISurveyRegionRepository
 
         foreach (var region in materialized)
         {
-            var exists = await _context.SurveyRegions
-                .AnyAsync(r => r.CellX == region.CellX && r.CellY == region.CellY && r.CellZ == region.CellZ, cancellationToken);
-            if (!exists)
+            var tracked = await _context.SurveyRegions
+                .FirstOrDefaultAsync(r => r.CellX == region.CellX && r.CellY == region.CellY && r.CellZ == region.CellZ, cancellationToken);
+            if (tracked is null)
             {
                 _context.SurveyRegions.Add(region);
             }
             else
             {
+                _context.Entry(tracked).State = EntityState.Detached;
                 _context.SurveyRegions.Update(region);
             }
         }

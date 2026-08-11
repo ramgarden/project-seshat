@@ -4,6 +4,7 @@ using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Data;
 using ProjectSeshat.Data.Repositories;
@@ -19,6 +20,9 @@ public sealed class App : Application
 
     public override void OnFrameworkInitializationCompleted()
     {
+        SeshatLog.InstallGlobalHandlers();
+        SeshatLog.Info("Application starting");
+
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
             desktop.MainWindow = CreateMainWindow();
@@ -54,6 +58,7 @@ public sealed class App : Application
         var observationRepository = new ObservationRepository(context);
         var navigationRepository = new NavigationStateRepository(context);
         var surveyRegionRepository = new SurveyRegionRepository(context);
+        var communityDiscoveryRepository = new CommunityDiscoveryRepository(context);
         var researchThreadRepository = new ResearchThreadRepository(context);
         var researchThreadEngine = new ResearchThreadEngine(researchThreadRepository);
         var investigationService = new InvestigationService(evidenceRepository, researchThreadRepository);
@@ -61,6 +66,7 @@ public sealed class App : Application
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
         var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository, navigationRepository);
+        var communityService = new CommunityService(new EddnListener(new NetMqEddnTransport()), communityDiscoveryRepository);
 
         var viewModel = new MainWindowViewModel(
             starSystemRepository,
@@ -75,7 +81,8 @@ public sealed class App : Application
             investigationService,
             atlasService,
             journalWatcher,
-            surveyRegionRepository);
+            surveyRegionRepository,
+            communityService);
 
         return viewModel;
     }

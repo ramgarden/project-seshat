@@ -26,3 +26,6 @@ public readonly record struct NavigationStateId(Guid Value);
 
 /// <summary>Identifies a persisted survey region in the atlas.</summary>
 public readonly record struct SurveyRegionId(Guid Value);
+
+/// <summary>Identifies a community-reported star-system discovery.</summary>
+public readonly record struct CommunityDiscoveryId(Guid Value);
