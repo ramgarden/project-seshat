@@ -2,12 +2,34 @@
              xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
              xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
              x:Class="ProjectSeshat.App.Views.GuidanceOverlayView"
-             x:DataType="vm:GuidanceOverlayViewModel">
-  <Border Background="#B0121B2E" BorderBrush="#7FCFB0" BorderThickness="1" CornerRadius="6" Padding="14,10">
-    <StackPanel Spacing="3">
-      <TextBlock Text="NEXT STEP · PROJECT SESHAT" Foreground="#7FCFB0" FontSize="11" FontWeight="SemiBold" LetterSpacing="1.2" />
-      <TextBlock Text="{Binding TitleText}" Foreground="#E5F5FF" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap" />
-      <TextBlock Text="{Binding DetailText}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" />
+             x:DataType="vm:GuidanceOverlayViewModel"
+             Background="Transparent">
+  <Grid Background="Transparent" RowDefinitions="Auto,Auto">
+    <!-- Draggable grip handle -->
+    <Border Grid.Row="0" Background="Transparent" Padding="0,0,0,2"
+            Cursor="SizeAll" HorizontalAlignment="Left" ZIndex="10">
+      <Border CornerRadius="4" Background="#55000000" Padding="10,4">
+        <TextBlock Text="⠿" Foreground="#CCFFFFFF" FontSize="12" />
+      </Border>
+    </Border>
+
+    <!-- The caption, with a soft shadow so it reads over any backdrop -->
+    <StackPanel Grid.Row="1" Spacing="3" Background="Transparent">
+      <TextBlock Text="NEXT STEP · PROJECT SESHAT" Foreground="#7FCFB0" FontSize="11" FontWeight="SemiBold" LetterSpacing="1.2">
+        <TextBlock.Effect>
+          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="#000000" Opacity="0.9" />
+        </TextBlock.Effect>
+      </TextBlock>
+      <TextBlock Text="{Binding TitleText}" Foreground="#E5F5FF" FontSize="22" FontWeight="SemiBold" TextWrapping="Wrap">
+        <TextBlock.Effect>
+          <DropShadowEffect BlurRadius="5" OffsetX="1" OffsetY="1" Color="#000000" Opacity="0.95" />
+        </TextBlock.Effect>
+      </TextBlock>
+      <TextBlock Text="{Binding DetailText}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap">
+        <TextBlock.Effect>
+          <DropShadowEffect BlurRadius="4" OffsetX="1" OffsetY="1" Color="#000000" Opacity="0.9" />
+        </TextBlock.Effect>
+      </TextBlock>
     </StackPanel>
-  </Border>
+  </Grid>
 </UserControl>

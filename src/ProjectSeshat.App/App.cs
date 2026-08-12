@@ -1,4 +1,5 @@
 using Avalonia;
+using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
@@ -26,18 +27,25 @@ public sealed class App : Application
 
         if (ApplicationLifetime is IClassicDesktopStyleApplicationLifetime desktop)
         {
+            // Closing the main window must terminate the app (and its overlay), not linger.
+            desktop.ShutdownMode = ShutdownMode.OnMainWindowClose;
             desktop.MainWindow = CreateMainWindow();
         }
 
         base.OnFrameworkInitializationCompleted();
     }
 
-    public static string ResolveDatabasePath()
+    public static string ResolveAppDataDirectory()
     {
         var appData = Environment.GetFolderPath(Environment.SpecialFolder.ApplicationData);
         var dataDirectory = Path.Combine(appData, "ProjectSeshat");
         Directory.CreateDirectory(dataDirectory);
-        return Path.Combine(dataDirectory, "project-seshat.db");
+        return dataDirectory;
+    }
+
+    public static string ResolveDatabasePath()
+    {
+        return Path.Combine(ResolveAppDataDirectory(), "project-seshat.db");
     }
 
     public static MainWindowViewModel CreateViewModel()
