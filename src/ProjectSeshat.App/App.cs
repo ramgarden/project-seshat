@@ -139,6 +139,13 @@ public sealed class App : Application
             }
         };
 
+        // An overlay defaulting to visible (e.g. voice available) must appear at launch, not
+        // only after a user toggles it.
+        if (viewModel.OverlayVisible)
+        {
+            overlay.Show();
+        }
+
         return new MainWindow(viewModel);
     }
 }

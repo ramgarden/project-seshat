@@ -89,6 +89,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         ToggleOverlayCommand = new RelayCommand(ToggleOverlay);
         SpeakNowCommand = new RelayCommand(SpeakNow);
+        TestGuidanceCommand = new RelayCommand(TestGuidance);
 
         // Landing page is the search guide.
         _currentPage = SearchGuide;
@@ -199,6 +200,8 @@ public sealed class MainWindowViewModel : ViewModelBase
 
     public ICommand SpeakNowCommand { get; }
 
+    public ICommand TestGuidanceCommand { get; }
+
     /// <summary>Starts live journal watching so the guide and stats update as the game writes new events.</summary>
     public void StartJournalWatcher() => _journalWatcher?.Start();
 
@@ -214,6 +217,22 @@ public sealed class MainWindowViewModel : ViewModelBase
     private void ToggleOverlay() => OverlayVisible = !OverlayVisible;
 
     private void SpeakNow() => _voicePinger?.Speak(Guidance.Transcript ?? "");
+
+    /// <summary>
+    /// Pushes a fixed demo step through the same overlay + voice pipeline the crawl uses, so the
+    /// on-screen caption and speech can be checked without any journal data.
+    /// </summary>
+    private void TestGuidance()
+    {
+        var step = new ProjectSeshat.Atlas.CrawlStep(
+            "Jump",
+            "Sol",
+            "Nearest unsearched star within reach",
+            "90 Ly away");
+        OnCrawlUpdated(step);
+        OverlayVisible = true;
+        _voicePinger?.Speak(Guidance.Transcript ?? "");
+    }
 
     private void UpdateActiveStates()
     {

@@ -136,6 +136,12 @@
 
         <!-- Footer -->
         <StackPanel Grid.Row="2" Spacing="8">
+          <Button Classes="nav-btn" Command="{Binding TestGuidanceCommand}" HorizontalAlignment="Stretch">
+            <StackPanel Orientation="Horizontal" Spacing="12">
+              <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm1 15h-2v-2h2v2zm0-4h-2V7h2v6z" Width="16" Height="16" />
+              <TextBlock Text="Test guidance" VerticalAlignment="Center" />
+            </StackPanel>
+          </Button>
           <Button Classes="nav-btn" Command="{Binding ToggleOverlayCommand}" HorizontalAlignment="Stretch">
             <StackPanel Orientation="Horizontal" Spacing="12">
               <PathIcon Data="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm-2 15l-5-5 1.41-1.41L10 14.17l7.59-7.59L19 8l-9 9z" Width="16" Height="16" />
