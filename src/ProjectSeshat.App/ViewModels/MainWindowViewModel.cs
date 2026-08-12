@@ -1,5 +1,6 @@
 using System;
 using System.Windows.Input;
+using ProjectSeshat.App.Elite;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
@@ -19,10 +20,14 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isExplorationActive;
     private bool _isThreadsActive;
     private bool _isGalaxyMapActive;
+    private bool _isKeybindSetupActive;
     private readonly JournalWatcher? _journalWatcher;
     private readonly IVoicePinger? _voicePinger;
+    private readonly KeyAutomationService? _keyAutomation;
     private bool _overlayVisible;
     private string _overlayVisibilityText = "Show overlay";
+    private bool _autoTargetEnabled;
+    private string _autoTargetStatusText = "Auto-target unavailable";
 
     public MainWindowViewModel(
         IStarSystemRepository starSystemRepository,
@@ -39,7 +44,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         JournalWatcher? journalWatcher = null,
         ISurveyRegionRepository? surveyRegionRepository = null,
         CommunityService? communityService = null,
-        IVoicePinger? voicePinger = null)
+        IVoicePinger? voicePinger = null,
+        KeyAutomationService? keyAutomation = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -62,10 +68,19 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         Threads = new ThreadsViewModel(researchThreadEngine, investigationService);
 
+        _keyAutomation = keyAutomation ?? new KeyAutomationService();
+        _keyAutomation.TryEnable();
+        RefreshAutomationStatus();
+
         _voicePinger = voicePinger ?? new SilentVoicePinger();
         Guidance = new GuidanceOverlayViewModel();
         SearchGuide.CrawlUpdated += OnCrawlUpdated;
         OverlayVisible = _voicePinger.IsAvailable;
+
+        KeybindSetup = new KeybindSetupViewModel(_keyAutomation);
+
+        ToggleAutoTargetCommand = new RelayCommand(ToggleAutoTarget);
+        OpenKeybindSetupCommand = new RelayCommand(() => CurrentPage = KeybindSetup);
 
         _journalWatcher = journalWatcher;
         if (_journalWatcher is not null)
@@ -113,6 +128,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ThreadsViewModel Threads { get; }
 
     public GalaxyMapViewModel GalaxyMap { get; }
+
+    public KeybindSetupViewModel KeybindSetup { get; }
 
     public GuidanceOverlayViewModel Guidance { get; }
 
@@ -184,6 +201,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         private set => SetProperty(ref _isGalaxyMapActive, value);
     }
 
+    public bool IsKeybindSetupActive
+    {
+        get => _isKeybindSetupActive;
+        private set => SetProperty(ref _isKeybindSetupActive, value);
+    }
+
     public ICommand NavigateToDashboardCommand { get; }
 
     public ICommand NavigateToSearchGuideCommand { get; }
@@ -195,6 +218,8 @@ public sealed class MainWindowViewModel : ViewModelBase
     public ICommand NavigateToThreadsCommand { get; }
 
     public ICommand NavigateToGalaxyMapCommand { get; }
+
+    public ICommand OpenKeybindSetupCommand { get; }
 
     public ICommand ToggleOverlayCommand { get; }
 
@@ -212,11 +237,43 @@ public sealed class MainWindowViewModel : ViewModelBase
         {
             _voicePinger?.Speak(Guidance.Transcript ?? "");
         }
+
+        // When auto-targeting is enabled, drive the game with the commander's real keys.
+        if (step is not null && _autoTargetEnabled)
+        {
+            _keyAutomation?.AutoTargetNextStar(step);
+        }
     }
 
     private void ToggleOverlay() => OverlayVisible = !OverlayVisible;
 
     private void SpeakNow() => _voicePinger?.Speak(Guidance.Transcript ?? "");
+
+    public ICommand ToggleAutoTargetCommand { get; }
+
+    public bool AutoTargetEnabled
+    {
+        get => _autoTargetEnabled;
+        private set => SetProperty(ref _autoTargetEnabled, value);
+    }
+
+    public string AutoTargetStatusText
+    {
+        get => _autoTargetStatusText;
+        private set => SetProperty(ref _autoTargetStatusText, value);
+    }
+
+    public bool AutoTargetAvailable => _keyAutomation?.CanAutoTarget == true;
+
+    public string AutoTargetToggleText => AutoTargetEnabled ? "Disable auto-target" : "Enable auto-target";
+
+    private void ToggleAutoTarget()
+    {
+        AutoTargetEnabled = !AutoTargetEnabled;
+        OnPropertyChanged(nameof(AutoTargetToggleText));
+    }
+
+    private void RefreshAutomationStatus() => AutoTargetStatusText = _keyAutomation?.StatusText ?? "Auto-target unavailable";
 
     /// <summary>
     /// Pushes a fixed demo step through the same overlay + voice pipeline the crawl uses, so the
@@ -242,6 +299,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         IsExplorationActive = CurrentPage == Exploration;
         IsThreadsActive = CurrentPage == Threads;
         IsGalaxyMapActive = CurrentPage == GalaxyMap;
+        IsKeybindSetupActive = CurrentPage == KeybindSetup;
     }
 
     private sealed class RelayCommand(Action execute) : ICommand

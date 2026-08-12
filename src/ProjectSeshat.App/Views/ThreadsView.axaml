@@ -33,6 +33,20 @@
       <Setter Property="CornerRadius" Value="4" />
       <Setter Property="Padding" Value="10,8" />
     </Style>
+    <Style Selector="ComboBox.entry">
+      <Setter Property="Background" Value="#08111D" />
+      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="BorderBrush" Value="#1A4D67" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="6,6" />
+    </Style>
+    <Style Selector="ComboBox.entry /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="#E5F5FF" />
+    </Style>
+    <Style Selector="ComboBox.entry:pointerover /template/ ContentPresenter">
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
     <Style Selector="Button.action">
       <Setter Property="Background" Value="#1C8BC4" />
       <Setter Property="Foreground" Value="#03111B" />
@@ -65,18 +79,18 @@
       <Setter Property="Margin" Value="0,0,8,0" />
     </Style>
     <Style Selector="Button.ghost:pointerover">
-      <Setter Property="Background" Value="#142C41" />
-      <Setter Property="Foreground" Value="#FFFFFF" />
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#02101B" />
     </Style>
     <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
-      <Setter Property="Background" Value="#142C41" />
+      <Setter Property="Background" Value="#1C8BC4" />
     </Style>
     <Style Selector="Button.ghost:pressed">
-      <Setter Property="Background" Value="#0E1F30" />
-      <Setter Property="Foreground" Value="#D2EAF7" />
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
     </Style>
     <Style Selector="Button.ghost:pressed /template/ ContentPresenter">
-      <Setter Property="Background" Value="#0E1F30" />
+      <Setter Property="Background" Value="#0F5F82" />
     </Style>
   </UserControl.Styles>
 

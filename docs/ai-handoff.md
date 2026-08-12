@@ -150,8 +150,34 @@ The **in-game guidance overlay** (`Views/GuidanceOverlayWindow.cs`) is an always
 - **Voice pings**: `IVoicePinger` + `WindowsSpeechVoicePinger` (System.Speech TTS, Windows-only, fails safe) and `SilentVoicePinger` for tests/non-Windows. The main window has a "Speak next step" button; steps are spoken automatically when the overlay is visible.
 - **Overlay toggle** lives in the sidebar footer; visibility is owned by `MainWindowViewModel.OverlayVisible` and the window is shown/hidden in `App.CreateMainWindow` on property change.
 - **Gate picker**: the Search Guide's recommended-gate card has a "Use as gate" button (`SelectRecommendedGateCommand`) that anchors the outward crawl at that system via `gateSystemId`, plus a "Clear" path through the same button.
+- **Position persistence is crash-safe**: the overlay saves its screen position to `overlay-position.json` (beside the DB, via `OverlayPositionStore`) **immediately on `WM_MOVE`/`WM_EXITSIZEMOVE` from the Win32 message loop** (`GuidanceOverlayWindow.WinProc` → `SaveFromNativeRect`), then also on Avalonia's `PositionChanged` and on window close. Do NOT rely on Avalonia `Window.PositionChanged` alone for drags — native `HTCAPTION` drags don't reliably raise it, so the Win32 `WM_MOVE` path is the primary saver. This is what keeps the dragged position after a crash.
 
-The window/TTS behaviour itself requires manual on-device validation (can't be exercised in this sandbox); all derivation logic is covered by unit tests. **Milestone 1.11 (keybinding auto-targeting)** will read the commander's ED `*.binds` and synthesize target/jump input, falling back to naming the star in this overlay.
+The window/TTS behaviour itself requires manual on-device validation (can't be exercised in this sandbox); all derivation logic is covered by unit tests. **Milestone 1.11 (keybinding auto-targeting) is also implemented** — see below.
+
+## Keybinding auto-targeting (Milestone 1.11)
+
+`ProjectSeshat.App/Elite/` implements driving ED with the commander's real key bindings:
+
+- `BindingsParser` parses `*.binds` XML into named `BindingEntry` bindings (device, key, modifier); `BindingsParser.FindKeyboard` returns a keyboard binding by action name.
+- `BindingsPathResolver` locates the ED bindings directory (mirrors the journal resolver: Saved Games + LocalAppData + Steam userdata).
+- `IGameInputSender` abstracts synthetic input; `SendInputGameInputSender` is the Windows `SendInput` implementation with an `IsEliteInForeground` guard; tests inject a fake.
+- `KeyAutomationService.TryEnable()` reads the bindings, resolves `SelectTarget` + `HyperSuperCombination`, and arms automation. `AutoTargetNextStar(step)` sends the target key then the jump key only for Jump/Back-track steps, only when armed and the game is focused — otherwise it no-ops and the overlay names the star.
+- The main-window sidebar shows an "Enable auto-target" toggle (with an active on-state) and status text (the resolved keys) or the fallback note. Automatically fires on crawl-step changes when enabled.
+
+The parser/resolver/automation decision logic is unit-tested offline with fakes; the real `SendInput` + foreground detection need an on-device smoke test with ED running and a real `*.binds` file.
+
+### Keybind setup assistant
+
+`KeybindSetupView`/`KeybindSetupViewModel` (sidebar "Keybind Setup" entry) walks the player through making auto-targeting usable:
+
+- **Detection**: `StartPresetResolver` reads the active preset name from `StartPreset.start` to pick the right `.binds` (falling back to the first `.binds`); `BindingsPathResolver.ResolveBindingsFile`/`ResolveBindingsDirectory` now prefer that and expose the resolved path/dir on `KeyAutomationService`.
+- Shows target/jump keys, the resolved binds file path, and a ready/not-ready badge.
+- **Test**: `KeyAutomationService.TestJump()` sends one jump keypress; the view reports "Transmitted" vs "Not sent — game not focused" (`CanTest` gates it).
+- **Auto-write** (`BindingsWriter`): opt-in via an "I understand…needs restart" checkbox (`AllowAutoWrite`). Writes a sparse `Seshat.Auto.4.0.binds` (only `SelectTarget`=T and `HyperSuperCombination`=J; ED fills the rest from defaults) plus `StartPreset.start`, then re-detects. Best-effort; requires an ED restart and is version-sensitive.
+- **Manual guide**: step-by-step ED → Options → Controls instructions, then **Re-detect**.
+- Commands: `RedetectCommand`, `TestJumpCommand`, `WriteDefaultBindingsCommand`. Wired via `OpenKeybindSetupCommand` on `MainWindowViewModel` and a `KeybindSetupViewModel` DataTemplate in `App.axaml`.
+
+The write→relaunch→load cycle and the live test press need on-device validation; all detection/writer/view-model logic is unit-tested.
 
 ## Desktop application
 
@@ -168,6 +194,25 @@ Preserve these UI conventions:
 - Keep code-behind free of application logic.
 - Retain the title `Project Seshat - Galactic Research Platform` unless product direction changes it.
 
+### UI color / contrast rules (buttons must never "disappear")
+
+**Rule of thumb: verify colors on every change.** Before finishing any UI work, check that no foreground/text/hover color matches or closely matches the background it sits on (dark `~#08111D` / panels `~#0E1D2E` / inner cards `~#0E1B28` / `~#08111D`). The most common failure is a **label inside a checkbox, toggle, or button** whose text turns invisible on hover because it inherits the theme's light hover foreground — always set the text/element's own `Foreground` explicitly, plus the matching `:pointerover`/`:pressed` ContentPresenter overrides.
+
+The app is a dark sci-fi theme on a dark background (`~#08111D` / panels `#0E1D2E`). Avalonia's default Fluent `:pointerover` overlay is light and can wash a dark button into matching the background, making it invisible on hover/click. Follow these conventions everywhere, including **all buttons, checkboxes, toggles, and any interactive control**:
+
+- **Always give every interactive state an explicit, high-contrast color** — set both the control's `Background`/`Foreground` **and** the matching `/template/ ContentPresenter` override for `:pointerover` and `:pressed`. (See `MainWindow.axaml` `Button.nav-btn`, `Button.game-tool`, and SearchGuide/Threads `Button.action`/`Button.ghost` for the pattern.)
+- State color set (industrial standard used across the app):
+  - default fill `#1C8BC4` (teal), text `#02101B` / `#03111B`
+  - hover `#36C5F0` (bright cyan)
+  - pressed `#0F5F82` with white text
+- **Active / "on" toggle state** must be distinct, e.g. `Button.game-tool.active` uses green `#2C8F6E` (hover `#3FB98E`, pressed `#1F6E55`). Bind it via `Classes.active="{Binding SomeBool}"`.
+- **Transparent "ghost"/nav buttons** are only OK when a hover state that clearly differs from the panel is supplied (e.g. `Button.nav-btn:pointerover` = `#22405A`). Never leave a control with the theme's default light hover over dark.
+- **Icons: `PathIcon` does NOT inherit `Foreground`.** Every `PathIcon` in a button (e.g. the sidebar nav/game-tool icons) must get an explicit `Foreground` per state (`Button.nav-btn PathIcon` → `#A8D4EA`, `:pointerover` → `#FFFFFF`, `.active` → `#02101B`, and matching rules for `game-tool`). Without these the icons render default-dark and vanish on the dark sidebar. (See `MainWindow.axaml`.)
+- **Buttons with only a `Background` hover setter are not enough** — Avalonia's light hover overlay is painted by the template's `ContentPresenter`; always also add `<selector>:pointerover /template/ ContentPresenter` (and `:pressed`) with the matching background/foreground, exactly as `ThreadsView`/`SearchGuideView`/`KeybindSetupView` do. A bare `Button.action:pointerover { Background=… }` still lets the theme wash the button into the panel.
+- **Checkboxes / toggles / radio labels**: give the label `TextBlock` an explicit `Foreground` (e.g. `#E5F5FF`) rather than relying on inheritance; give the `CheckBox` an explicit `Background`/`BorderBrush`/`BorderThickness` so the box is visible, plus `CheckBox:pointerover → Foreground #FFFFFF` and `CheckBox /template/ ContentPresenter` overrides so the caption never washes out. (See `KeybindSetupView.axaml` "I understand this writes a minimal binding file…".)
+- When adding any control, grep existing views for the `:pointerover` / `:pressed` / `:active` styles and mirror them; verify nothing uses only the default theme hover.
+- **Self-check habit**: after any UI edit, run `dotnet build` and scan the touched `.axaml` for (a) any `Foreground`/`Background` hex close to a panel color with no state override, and (b) any label without an explicit foreground inside an interactive control.
+
 ## Data layer and migrations
 
 `ProjectSeshat.Data` implements the repositories over SQLite/EF Core. The DbContext is `ProjectSeshatDbContext`; migrations live in `src/ProjectSeshat.Data/Migrations`.
@@ -182,7 +227,7 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (81 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, and the Atlas search guide tiers. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (106 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, the Atlas search guide tiers, overlay/voice/auto-targeting logic, and the guidance overlay position store. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
@@ -196,7 +241,7 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestones 1.9 (systematic outward search) and 1.10 (on-screen guidance overlay + voice) are implemented.** The next candidate is **Milestone 1.11 — Keybinding auto-targeting**: reads the commander's ED `*.binds`, discovers the actual keys for target selection / hyperjump, and synthesizes target/jump input so the player just confirms the jump — falling back to naming the star in the 1.10 overlay when bindings aren't found. The overlay/vista behaviour needs manual on-device checks; the crawl logic is fully tested offline. Other next steps:
+Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestones 1.9 (outward search), 1.10 (overlay + voice), and 1.11 (keybinding auto-targeting) are implemented.** Remaining roadmap candidates are the "Next" items (Spansh route plotting, guided-search filtering, recently-discovered views). The auto-targeting device layer needs an on-device smoke test (ED present + a real `.binds` file). Other next steps:
 
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).

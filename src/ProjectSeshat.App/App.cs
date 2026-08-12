@@ -3,6 +3,7 @@ using Avalonia.Controls;
 using Avalonia.Controls.ApplicationLifetimes;
 using Avalonia.Markup.Xaml;
 using Microsoft.EntityFrameworkCore;
+using ProjectSeshat.App.Elite;
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.App.Views;
 using ProjectSeshat.Atlas;
@@ -76,6 +77,7 @@ public sealed class App : Application
         var pathResolver = new JournalPathResolver();
         var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository, navigationRepository);
         var communityService = new CommunityService(new EddnListener(new NetMqEddnTransport()), communityDiscoveryRepository);
+        var keyAutomation = new KeyAutomationService();
 
         var viewModel = new MainWindowViewModel(
             starSystemRepository,
@@ -92,7 +94,8 @@ public sealed class App : Application
             journalWatcher,
             surveyRegionRepository,
             communityService,
-            new WindowsSpeechVoicePinger());
+            new WindowsSpeechVoicePinger(),
+            keyAutomation);
 
         return viewModel;
     }

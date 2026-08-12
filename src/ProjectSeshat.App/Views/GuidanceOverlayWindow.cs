@@ -20,6 +20,8 @@ public sealed class GuidanceOverlayWindow : Window
     private const int WsExNoActivate = 0x08000000;
 
     private const int WmNcHitTest = 0x0084;
+    private const int WmMove = 0x0003;
+    private const int WmExitSizeMove = 0x0232;
     private const int HtTransparent = -1;
     private const int HtCaption = 2;
 
@@ -32,7 +34,6 @@ public sealed class GuidanceOverlayWindow : Window
     private IntPtr _subclassId = new(1);
     private bool _hooked;
     private bool _restored;
-    private DateTimeOffset _lastSaveUtc = DateTimeOffset.MinValue;
 
     private static WinProcDelegate? s_winProc; // keep delegate alive while subclassed
 
@@ -81,20 +82,13 @@ public sealed class GuidanceOverlayWindow : Window
 
     private void OnPositionChanged(object? sender, PixelPointEventArgs e)
     {
-        if (!_restored)
+        // Belt-and-braces: save on Avalonia's event too. The Win32 WM_MOVE path is the primary
+        // one, so every save goes through the native window rect (single source of truth) — never
+        // through the stale Avalonia Position property, which native HTCAPTION drags don't update.
+        if (_restored)
         {
-            return; // ignore the transient position set while restoring
+            SaveFromNativeRect();
         }
-
-        // Debounce: avoid hammering the disk during a drag.
-        var now = DateTimeOffset.UtcNow;
-        if (now - _lastSaveUtc < TimeSpan.FromMilliseconds(300))
-        {
-            return;
-        }
-
-        _lastSaveUtc = now;
-        _positionStore.Save(e.Point.X, e.Point.Y);
     }
 
     private void OnClosed(object? sender, EventArgs e)
@@ -102,7 +96,7 @@ public sealed class GuidanceOverlayWindow : Window
         // One final save so the last dragged position is kept even if a drag ended on close.
         if (_restored)
         {
-            _positionStore.Save(Position.X, Position.Y);
+            SaveFromNativeRect();
         }
 
         UnhookNcHitTest();
@@ -188,7 +182,38 @@ public sealed class GuidanceOverlayWindow : Window
             return new IntPtr(HtTransparent); // click passes through to the game
         }
 
+        if (msg is WmMove or WmExitSizeMove)
+        {
+            // Persist immediately as the window moves, straight from the native message loop.
+            // This covers native HTCAPTION drags (which don't raise Avalonia's PositionChanged
+            // reliably) and survives a crash after a move.
+            SaveFromNativeRect();
+            return DefSubclassProc(hWnd, msg, wParam, lParam);
+        }
+
         return DefSubclassProc(hWnd, msg, wParam, lParam);
+    }
+
+    private void SaveFromNativeRect()
+    {
+        if (!_restored || _hwnd == IntPtr.Zero)
+        {
+            return; // ignore the transient position set while restoring
+        }
+
+        try
+        {
+            // Read the real OS position (native HTCAPTION drags move the OS window but don't
+            // update Avalonia's Position), so this never writes a stale 0,0.
+            if (GetWindowRect(_hwnd, out var rect))
+            {
+                _positionStore.Save(rect.Left, rect.Top);
+            }
+        }
+        catch
+        {
+            // Best-effort; never let position saving take down the app.
+        }
     }
 
     private static (int X, int Y) ScreenToClient(IntPtr hWnd, int screenX, int screenY)
@@ -206,6 +231,18 @@ public sealed class GuidanceOverlayWindow : Window
         public int X;
         public int Y;
     }
+
+    [StructLayout(LayoutKind.Sequential)]
+    private struct RECT
+    {
+        public int Left;
+        public int Top;
+        public int Right;
+        public int Bottom;
+    }
+
+    [DllImport("user32.dll")]
+    private static extern bool GetWindowRect(IntPtr hWnd, out RECT lpRect);
 
     [DllImport("user32.dll")]
     private static extern bool ScreenToClient(IntPtr hWnd, ref POINT lpPoint);

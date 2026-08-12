@@ -123,11 +123,13 @@ Goal: show the next action as a transparent subtitle **over the game** so the pl
 
 ## Milestone 1.11 — Keybinding auto-targeting
 
-Goal: use the commander's actual ED bindings so the player only engages the jump. Highest device dependency — needs an ED install + keybindings file to verify.
+Goal: use the commander's actual ED bindings so the player only engages the jump. Highest device dependency — needs an ED install + keybindings file to verify on-device.
 
-- [ ] Read the commander's ED key-bindings file (`Options\Bindings\*.binds`) to discover the actual keys for target selection / hyperjump rather than hardcoding bindings.
-- [ ] **Auto-targeting**: synthesize the target-selection key for the next route star, and charge the hyperjump, using their real keys — so the player just confirms the jump.
-- [ ] Graceful degradation: if no bindings are found or the game isn't focused, fall back to naming the star in the 1.10 overlay.
+- [x] Read the commander's ED key-bindings file (`Options\Bindings\*.binds`) to discover the actual keys for target selection / hyperjump rather than hardcoding bindings (`BindingsParser`, `BindingsPathResolver`).
+- [x] **Auto-targeting**: synthesize the target-selection key for the next route star, and charge the hyperjump, using their real keys (`SendInput` via `IGameInputSender`) — so the player just confirms the jump. Runs only on Jump/Back-track steps, only when bindings are armed and the game is the foreground window.
+- [x] Graceful degradation: if no bindings are found or the game isn't focused, fall back to naming the star in the `1.10` overlay. The sidebar shows an "Enable auto-target" toggle + status (the resolved keys) or the fallback note.
+- [x] Core logic (parser, path resolver, automation decision-making) fully unit-tested offline with injected fakes; only the real `SendInput`/foreground detection needs an on-device smoke test.
+- [x] **Keybind setup assistant** (`KeybindSetupView`/`KeybindSetupViewModel`, sidebar entry): detects/parses current binds (respecting `StartPreset.start` via `StartPresetResolver`), shows the resolved target/jump keys, offers a live **Test** press (game must be focused), and — when unusable — can write a **minimal default binds** file (`BindingsWriter`, opt-in, `Seshat.Auto.4.0`, sparse so it doesn't clobber other controls, requires an ED restart) or guide the player through ED's in-game Controls screen, then **Re-detect**.
 
 ## Next
 

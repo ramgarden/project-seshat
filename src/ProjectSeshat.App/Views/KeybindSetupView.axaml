@@ -1,0 +1,179 @@
+<UserControl xmlns="https://github.com/avaloniaui"
+             xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
+             xmlns:vm="clr-namespace:ProjectSeshat.App.ViewModels"
+             x:Class="ProjectSeshat.App.Views.KeybindSetupView"
+             x:DataType="vm:KeybindSetupViewModel">
+  <UserControl.Styles>
+    <Style Selector="TextBlock.section-label">
+      <Setter Property="Foreground" Value="#7DAAC4" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="LetterSpacing" Value="1.4" />
+    </Style>
+    <Style Selector="TextBlock.kv-label">
+      <Setter Property="Foreground" Value="#47738C" />
+      <Setter Property="FontSize" Value="12" />
+      <Setter Property="LetterSpacing" Value="0.8" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="TextBlock.kv-value">
+      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="FontSize" Value="15" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="VerticalAlignment" Value="Center" />
+    </Style>
+    <Style Selector="Button.action">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#03111B" />
+      <Setter Property="FontWeight" Value="SemiBold" />
+      <Setter Property="BorderThickness" Value="0" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.action:pointerover">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.action:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#36C5F0" />
+    </Style>
+    <Style Selector="Button.action:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.action:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.ghost">
+      <Setter Property="Background" Value="Transparent" />
+      <Setter Property="Foreground" Value="#D2EAF7" />
+      <Setter Property="BorderBrush" Value="#4A9CC7" />
+      <Setter Property="BorderThickness" Value="1" />
+      <Setter Property="CornerRadius" Value="4" />
+      <Setter Property="Padding" Value="14,8" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover">
+      <Setter Property="Background" Value="#1C8BC4" />
+      <Setter Property="Foreground" Value="#02101B" />
+    </Style>
+    <Style Selector="Button.ghost:pointerover /template/ ContentPresenter">
+      <Setter Property="Background" Value="#1C8BC4" />
+    </Style>
+    <Style Selector="Button.ghost:pressed">
+      <Setter Property="Background" Value="#0F5F82" />
+      <Setter Property="Foreground" Value="#FFFFFF" />
+    </Style>
+    <Style Selector="Button.ghost:pressed /template/ ContentPresenter">
+      <Setter Property="Background" Value="#0F5F82" />
+    </Style>
+    <!-- Checkbox: replace Fluent's template (which renders a light/theme box that vanishes on dark)
+         with our own fully-controlled visible box. -->
+    <Style Selector="CheckBox">
+      <Setter Property="Foreground" Value="#E5F5FF" />
+      <Setter Property="Template">
+        <ControlTemplate>
+          <Grid ColumnDefinitions="Auto,*">
+            <Border Name="PART_Box"
+                    Width="18" Height="18"
+                    Background="#0E1F30"
+                    BorderBrush="#4A9CC7"
+                    BorderThickness="1.5"
+                    CornerRadius="3"
+                    Margin="0,0,10,0"
+                    VerticalAlignment="Center">
+              <Path Name="PART_Check"
+                    Data="M4,9 L8,13 L14,5"
+                    Stroke="#36C5F0"
+                    StrokeThickness="2"
+                    StrokeLineCap="Round"
+                    StrokeJoin="Round"
+                    IsVisible="False" />
+            </Border>
+            <ContentPresenter Grid.Column="1"
+                              Content="{TemplateBinding Content}"
+                              Foreground="{TemplateBinding Foreground}"
+                              VerticalAlignment="Center" />
+          </Grid>
+        </ControlTemplate>
+      </Setter>
+    </Style>
+    <Style Selector="CheckBox:pointerover /template/ Border#PART_Box">
+      <Setter Property="BorderBrush" Value="#36C5F0" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Border#PART_Box">
+      <Setter Property="BorderBrush" Value="#36C5F0" />
+    </Style>
+    <Style Selector="CheckBox:checked /template/ Path#PART_Check">
+      <Setter Property="IsVisible" Value="True" />
+    </Style>
+  </UserControl.Styles>
+
+  <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="20">
+    <StackPanel Spacing="16">
+      <StackPanel Spacing="6">
+        <TextBlock Classes="section-label" Text="AUTO-TARGETING — KEYBIND SETUP" />
+        <TextBlock Text="For Seshat to jump for you, Elite needs a keyboard key for 'select target' and 'hyper super combination' (jump). Here you can see what Elite has bound, test it, and fix it if it's missing." Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" LineHeight="19" />
+      </StackPanel>
+
+      <Border Background="#0E1B28" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="16">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section-label" Text="CURRENT DETECTION" />
+          <Grid ColumnDefinitions="120,*,18,90">
+            <TextBlock Classes="kv-label" Text="Target key" Grid.Column="0" />
+            <TextBlock Classes="kv-value" Text="{Binding TargetKeyText}" Grid.Column="1" />
+            <TextBlock Classes="kv-label" Text="Jump key" Grid.Column="2" />
+            <TextBlock Classes="kv-value" Text="{Binding JumpKeyText}" Grid.Column="3" />
+          </Grid>
+          <TextBlock Text="{Binding BindsPathText}" Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" />
+          <TextBlock Text="{Binding StatusText}" Foreground="#7FCFB0" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+        </StackPanel>
+      </Border>
+
+      <Border Background="#0E1B28" BorderBrush="#2C8F6E" BorderThickness="1" CornerRadius="6" Padding="16">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section-label" Text="TEST — VERIFY IT WORKS" />
+          <TextBlock Text="Make sure Elite Dangerous is focused (in the cockpit), then press Test. The jump key is sent to the game once." Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" />
+          <StackPanel Orientation="Horizontal" Spacing="12">
+            <Button Classes="action" Command="{Binding TestJumpCommand}" IsEnabled="{Binding CanTest}">
+              <TextBlock Text="Test jump" />
+            </Button>
+            <TextBlock Text="{Binding TestResultText}" Foreground="#7FCFB0" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Border Background="#0E1B28" BorderBrush="#F2C14E" BorderThickness="1" CornerRadius="6" Padding="16">
+        <StackPanel Spacing="8">
+          <TextBlock Classes="section-label" Text="FIX IT — AUTO WRITE" />
+          <TextBlock Text="If no usable bindings were found, Seshat can write a minimal keybind set (target = T, jump = J) into your Elite binding folder. Elite fills the rest from its defaults, so this doesn't touch your other controls. Restart Elite afterwards to load it." Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding CanWriteDefaults}" />
+          <TextBlock Text="Auto-target is ready — no binding write needed." Foreground="#7FCFB0" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding IsReady}" />
+          <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding CanWriteDefaults}">
+            <CheckBox IsChecked="{Binding AllowAutoWrite}" VerticalAlignment="Center" Foreground="#E5F5FF">
+              <TextBlock Text="I understand this writes a minimal binding file and needs an Elite restart" FontSize="12" Foreground="#E5F5FF" />
+            </CheckBox>
+          </StackPanel>
+          <StackPanel Orientation="Horizontal" Spacing="12" IsVisible="{Binding CanWriteDefaults}">
+            <Button Classes="action" Command="{Binding WriteDefaultBindingsCommand}">
+              <TextBlock Text="Write default binds" />
+            </Button>
+            <TextBlock Text="{Binding WriteResultText}" Foreground="#F2C14E" FontSize="12" TextWrapping="Wrap" VerticalAlignment="Center" />
+          </StackPanel>
+
+          <Border Height="1" Background="#1A4D67" Margin="0,4" />
+
+          <TextBlock Classes="section-label" Text="MANUAL — SET IT IN ELITE" />
+          <StackPanel Spacing="4">
+            <TextBlock Text="1. In Elite, open Options → Controls." Foreground="#D2EAF7" FontSize="12" />
+            <TextBlock Text="2. Find Select Target and bind a key (default: T)." Foreground="#D2EAF7" FontSize="12" />
+            <TextBlock Text="3. Find Hyper Super Combination (jump) and bind a key (default: J)." Foreground="#D2EAF7" FontSize="12" />
+            <TextBlock Text="4. Return here and press Re-detect." Foreground="#D2EAF7" FontSize="12" />
+          </StackPanel>
+        </StackPanel>
+      </Border>
+
+      <Button Classes="ghost" Command="{Binding RedetectCommand}" HorizontalAlignment="Left">
+        <TextBlock Text="Re-detect" />
+      </Button>
+    </StackPanel>
+  </Border>
+</UserControl>

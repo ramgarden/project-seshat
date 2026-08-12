@@ -41,6 +41,14 @@ Each entry explains **why** it's a priority: FSS shows the interesting signal ty
 
 It's driven by your journal files: coordinates come from `StarPos` on `FSDJump`, the system honk from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. The app also provides an interactive **3D galactic sky-map** of surveyed systems, ranked undiscovered regions, your current position, and the next jump target, plus a persisted **Atlas Survey** listing of frontier regions that survives restarts.
 
+## In-game guidance
+
+For single-screen, sound-off play, the app can guide you live over the game window:
+
+- **Overlay** — a transparent, draggable, click-through caption over the game shows the next step (`JUMP → SOL`, `HONK`, `FSS`, `DSS`, `BACK-TRACK`). Its position is remembered between runs.
+- **Voice** — optional Windows TTS pings each step.
+- **Auto-targeting** — reads your Elite Dangerous key bindings (`Options\Bindings\*.binds`) and can target the next route star and charge the hyperjump with your real keys, so you just confirm the FSD charge. A setup assistant (sidebar → **Keybind Setup**) detects your bindings, lets you test the press, and can write a minimal default binding set if none exist.
+
 See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) for the initial direction.
 
 Build: passing
