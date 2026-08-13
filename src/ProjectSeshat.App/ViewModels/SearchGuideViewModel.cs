@@ -25,6 +25,8 @@ public sealed class SearchGuideViewModel : ViewModelBase
     private string _outwardNextReason = "Build an outward survey from the gate below to start hunting Raxxla systematically.";
     private string _recommendedGate = "No gate found";
     private string _recommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+    private string _nearestRecommendedGate = "No gate found";
+    private string _nearestRecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
     private CrawlStep? _currentStep;
     private StarSystemId? _selectedGateId;
 
@@ -40,6 +42,7 @@ public sealed class SearchGuideViewModel : ViewModelBase
         _navigationRepository = navigationRepository;
 
         SelectRecommendedGateCommand = new RelayCommand(SelectRecommendedGate);
+        SelectNearestGateCommand = new RelayCommand(SelectNearestGate);
         ClearGateCommand = new RelayCommand(ClearGate);
 
         Refresh();
@@ -50,6 +53,15 @@ public sealed class SearchGuideViewModel : ViewModelBase
     public ObservableCollection<GuideTarget> FssItems { get; } = new();
 
     public ObservableCollection<GuideTarget> DssItems { get; } = new();
+
+    public ObservableCollection<GuideTarget> RaxxlaIntelItems { get; } = new();
+
+    private string _raxxlaIntelStatus = "Scan journals to start flagging Raxxla-hunt points of interest.";
+    public string RaxxlaIntelStatus
+    {
+        get => _raxxlaIntelStatus;
+        private set => SetProperty(ref _raxxlaIntelStatus, value);
+    }
 
     public string CurrentPositionText { get; private set; } = "Current position unknown";
 
@@ -112,13 +124,43 @@ public sealed class SearchGuideViewModel : ViewModelBase
         private set => SetProperty(ref _recommendedGateReasoning, value);
     }
 
+    public string NearestRecommendedGate
+    {
+        get => _nearestRecommendedGate;
+        private set => SetProperty(ref _nearestRecommendedGate, value);
+    }
+
+    public string NearestRecommendedGateReasoning
+    {
+        get => _nearestRecommendedGateReasoning;
+        private set => SetProperty(ref _nearestRecommendedGateReasoning, value);
+    }
+
     public bool HasRecommendedGate => !string.IsNullOrEmpty(RecommendedGate) && RecommendedGate != "No gate found";
+
+    public bool HasNearestRecommendedGate => !string.IsNullOrEmpty(NearestRecommendedGate) && NearestRecommendedGate != "No gate found";
 
     public bool HasSelectedGate => _selectedGateId is not null;
 
     public string GateActionText => _selectedGateId is null ? "Use as gate" : $"Gate: {RecommendedGate} · Clear";
 
+    /// <summary>Explains where the outward search starts: the current system unless a gate is chosen.</summary>
+    public string SearchOriginText
+    {
+        get
+        {
+            if (_selectedGateId is not null && HasRecommendedGate)
+            {
+                return $"Search bubble starts at {RecommendedGate} — created from the recommended gate.";
+            }
+
+            return "Search starts from your current system and radiates outward, unless you pick a better gate below.";
+        }
+    }
+
     public ICommand SelectRecommendedGateCommand { get; }
+
+    public ICommand SelectNearestGateCommand { get; }
 
     public ICommand ClearGateCommand { get; }
 
@@ -136,13 +178,33 @@ public sealed class SearchGuideViewModel : ViewModelBase
         }
 
         var gate = _systemRepository.FindByNameAsync(RecommendedGate).GetAwaiter().GetResult();
-        if (gate is not null)
+        SelectGate(gate);
+    }
+
+    private void SelectNearestGate()
+    {
+        if (_atlas is null || _systemRepository is null || string.IsNullOrEmpty(NearestRecommendedGate)
+            || string.Equals(NearestRecommendedGate, RecommendedGate, StringComparison.OrdinalIgnoreCase))
         {
-            _selectedGateId = gate.Id;
-            OnPropertyChanged(nameof(HasSelectedGate));
-            OnPropertyChanged(nameof(GateActionText));
-            Refresh();
+            return;
         }
+
+        var gate = _systemRepository.FindByNameAsync(NearestRecommendedGate).GetAwaiter().GetResult();
+        SelectGate(gate);
+    }
+
+    private void SelectGate(StarSystem? gate)
+    {
+        if (gate is null)
+        {
+            return;
+        }
+
+        _selectedGateId = gate.Id;
+        OnPropertyChanged(nameof(HasSelectedGate));
+        OnPropertyChanged(nameof(GateActionText));
+        OnPropertyChanged(nameof(SearchOriginText));
+        Refresh();
     }
 
     private void ClearGate()
@@ -156,6 +218,7 @@ public sealed class SearchGuideViewModel : ViewModelBase
         _selectedGateId = null;
         OnPropertyChanged(nameof(HasSelectedGate));
         OnPropertyChanged(nameof(GateActionText));
+        OnPropertyChanged(nameof(SearchOriginText));
         Refresh();
     }
 
@@ -207,7 +270,8 @@ public sealed class SearchGuideViewModel : ViewModelBase
             }
         }
 
-        if (crawl.RecommendedGate is { } gate)
+        var suggestions = _atlas.RecommendSearchGatesAsync(_systemRepository, _navigationRepository).GetAwaiter().GetResult();
+        if (suggestions.Best is { } gate)
         {
             RecommendedGate = gate.SystemName;
             RecommendedGateReasoning = gate.Reasoning;
@@ -219,6 +283,21 @@ public sealed class SearchGuideViewModel : ViewModelBase
             RecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
             OnPropertyChanged(nameof(HasRecommendedGate));
         }
+
+        if (suggestions.BestNearest is { } nearestGate)
+        {
+            NearestRecommendedGate = nearestGate.SystemName;
+            NearestRecommendedGateReasoning = nearestGate.Reasoning;
+            OnPropertyChanged(nameof(HasNearestRecommendedGate));
+        }
+        else
+        {
+            NearestRecommendedGate = "No gate found";
+            NearestRecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+            OnPropertyChanged(nameof(HasNearestRecommendedGate));
+        }
+
+        OnPropertyChanged(nameof(SearchOriginText));
 
         CurrentPositionText = guide.CurrentSystemName is not null
             ? $"You are at {guide.CurrentSystemName}"
@@ -239,6 +318,17 @@ public sealed class SearchGuideViewModel : ViewModelBase
         {
             DssItems.Add(GuideTarget.Dss(target));
         }
+
+        RaxxlaIntelItems.Clear();
+        var intel = _atlas.FindRaxxlaIntelAsync(_systemRepository, _bodyRepository).GetAwaiter().GetResult();
+        foreach (var hit in intel)
+        {
+            RaxxlaIntelItems.Add(GuideTarget.Intel(hit));
+        }
+
+        RaxxlaIntelStatus = RaxxlaIntelItems.Count == 0
+            ? "No Raxxla-hunt points of interest flagged yet. Consume signals and map notable bodies to build this list."
+            : $"{RaxxlaIntelItems.Count} point{(RaxxlaIntelItems.Count == 1 ? "" : "s")} worth investigating \u2014 community-derived hints, not a claimed location.";
 
         if (guide.NeedHonk.Count > 0)
         {
@@ -315,5 +405,18 @@ public sealed record GuideTarget(string Title, string Subtitle, string Detail)
             t.BodyName,
             $"{t.SystemName} · {(int)t.DistanceLs:N0} ls · {t.Reason}",
             $"Detailed Surface Scanner: {t.BodyName} in {t.SystemName}. {(int)t.DistanceLs:N0} ls from arrival. {why}");
+    }
+
+    public static GuideTarget Intel(RaxxlaIntelHit hit)
+    {
+        var tag = hit.Type switch
+        {
+            "Body" => "MAP / DSS",
+            "Signal" => "FSS SIGNAL",
+            "Name" => "LORE NAME",
+            _ => "IN HUNT BUBBLE"
+        };
+
+        return new GuideTarget(hit.Target, $"{tag} · {hit.SystemName}", hit.Reason);
     }
 }

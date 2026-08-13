@@ -66,7 +66,7 @@
         </StackPanel>
 
         <Grid ColumnDefinitions="*,360">
-          <Grid Grid.Column="0" ColumnDefinitions="*,*,*" Margin="0,0,16,0">
+          <Grid Grid.Column="0" ColumnDefinitions="*,*,*,190" Margin="0,0,16,0">
             <StackPanel Grid.Column="0" Spacing="6" Margin="0,0,8,0">
               <TextBlock Classes="stage-label" Text="1 · NEEDS HONK" />
               <ListBox ItemsSource="{Binding HonkItems}"
@@ -125,6 +125,27 @@
                 </ListBox.ItemTemplate>
               </ListBox>
             </StackPanel>
+
+            <StackPanel Grid.Column="3" Spacing="6" Margin="8,0,0,0">
+              <TextBlock Classes="stage-label" Text="4 · RAXXLA INTEL" />
+              <TextBlock Text="{Binding RaxxlaIntelStatus}" Foreground="#F2C14E" FontSize="11" TextWrapping="Wrap" />
+              <ListBox ItemsSource="{Binding RaxxlaIntelItems}"
+                       SelectedItem="{Binding SelectedTarget, Mode=TwoWay}"
+                       MaxHeight="320"
+                       ScrollViewer.VerticalScrollBarVisibility="Auto">
+                <ListBox.ItemTemplate>
+                  <DataTemplate>
+                    <Border Padding="10" Background="#08111D" BorderBrush="#F2C14E" BorderThickness="1" CornerRadius="4" Margin="0,0,0,4">
+                      <StackPanel Spacing="3">
+                        <TextBlock Text="{Binding Title}" Foreground="#F2C14E" FontWeight="SemiBold" FontSize="13" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Subtitle}" Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" />
+                        <TextBlock Text="{Binding Detail}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" />
+                      </StackPanel>
+                    </Border>
+                  </DataTemplate>
+                </ListBox.ItemTemplate>
+              </ListBox>
+            </StackPanel>
           </Grid>
 
           <ScrollViewer Grid.Column="1"
@@ -133,11 +154,23 @@
             <StackPanel Spacing="12">
               <Border Background="#0E1B28" BorderBrush="#7FCFB0" BorderThickness="1" CornerRadius="6" Padding="16">
                 <StackPanel Spacing="6">
-                  <TextBlock Classes="stage-label" Text="OUTWARD SURVEY — RECOMMENDED GATE" />
+                  <TextBlock Classes="stage-label" Text="OUTWARD SURVEY — START &amp; BEST GATE" />
+                  <TextBlock Text="{Binding SearchOriginText}" Foreground="#7FCFB0" FontSize="13" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <Border Height="1" Background="#1A4D67" Margin="0,4" />
                   <TextBlock Text="{Binding RecommendedGate}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
                   <TextBlock Text="{Binding RecommendedGateReasoning}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
-                  <Button Classes="action" Command="{Binding SelectRecommendedGateCommand}" HorizontalAlignment="Left" Margin="0,8,0,0">
-                    <TextBlock Text="{Binding GateActionText}" />
+                  <Button Classes="action" Command="{Binding SelectRecommendedGateCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" IsVisible="{Binding HasRecommendedGate}">
+                    <TextBlock Text="Use as gate (best)" />
+                  </Button>
+                </StackPanel>
+              </Border>
+              <Border Background="#0E1B28" BorderBrush="#4A9CC7" BorderThickness="1" CornerRadius="6" Padding="16">
+                <StackPanel Spacing="6">
+                  <TextBlock Classes="stage-label" Text="BEST NEAREST GATE — START NOW" />
+                  <TextBlock Text="{Binding NearestRecommendedGate}" Foreground="#E5F5FF" FontSize="20" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding NearestRecommendedGateReasoning}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
+                  <Button Classes="action" Command="{Binding SelectNearestGateCommand}" HorizontalAlignment="Left" Margin="0,8,0,0" IsVisible="{Binding HasNearestRecommendedGate}">
+                    <TextBlock Text="Use as gate (nearest)" />
                   </Button>
                 </StackPanel>
               </Border>

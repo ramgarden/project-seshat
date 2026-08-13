@@ -87,18 +87,14 @@ public sealed class KeyAutomationService
     public string? JumpKey { get; private set; }
 
     /// <summary>
-    /// Targets the next route star and charges the hyperjump, using the commander's real keys.
-    /// No-op (falling back to the overlay) when automation isn't armed or the game isn't focused.
+    /// Drives the game for the current step using the commander's real keys: for an FSS or DSS
+    /// step it targets the suspicious body/signal to inspect; for a Jump/Back-track step it targets
+    /// the next route star then charges the hyperjump. No-op (falling back to the overlay) when
+    /// automation isn't armed or the game isn't focused.
     /// </summary>
     public void AutoTargetNextStar(CrawlStep step)
     {
         if (!CanAutoTarget)
-        {
-            return;
-        }
-
-        // Target selection only matters when we're about to leave the current system.
-        if (step.Action is not ("Jump" or "Back-track"))
         {
             return;
         }
@@ -108,14 +104,31 @@ public sealed class KeyAutomationService
             return;
         }
 
-        if (TargetKey is not null)
+        switch (step.Action)
         {
-            _input.Press(TargetKey);
-        }
+            case "FSS":
+            case "DSS":
+                // Target the body/signal ahead so the player inspects or maps the right thing.
+                if (TargetKey is not null)
+                {
+                    _input.Press(TargetKey);
+                }
 
-        if (JumpKey is not null)
-        {
-            _input.Press(JumpKey);
+                break;
+
+            case "Jump":
+            case "Back-track":
+                if (TargetKey is not null)
+                {
+                    _input.Press(TargetKey);
+                }
+
+                if (JumpKey is not null)
+                {
+                    _input.Press(JumpKey);
+                }
+
+                break;
         }
     }
 

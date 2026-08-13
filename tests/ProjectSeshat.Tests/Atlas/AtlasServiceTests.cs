@@ -256,6 +256,70 @@ public sealed class AtlasServiceTests
     }
 
     [Fact]
+    public async Task OutwardCrawl_PrefersRaxxlaIntelSystemOverNearer()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        // Closer but ordinary name.
+        systems.Add(new StarSystem(new StarSystemId(2), "NEAR PLAIN", new GalacticCoordinates(0, 0, 50), SystemSurveyState.Unexplored));
+        // Farther away but the name carries a lore hint the hunt watches.
+        systems.Add(new StarSystem(new StarSystemId(3), "ASTROPHEL PRIME", new GalacticCoordinates(0, 0, 120), SystemSurveyState.Unexplored));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav, neighbourhoodRadiusLy: 200);
+
+        // The intel-flagged system should be the first hop, even though it's farther.
+        Assert.NotEmpty(crawl.Route);
+        Assert.Equal("ASTROPHEL PRIME", crawl.Route[0].SystemName);
+    }
+
+    [Fact]
+    public async Task RaxxlaIntel_FlagsLoreNamesSignalsAndBodies()
+    {
+        var systems = new InMemorySystemRepository();
+        var astrophel = new StarSystem(new StarSystemId(1), "ASTROPHEL PRIME", new GalacticCoordinates(0, 0, 10), SystemSurveyState.Honked, NonBodySignals: 1, SignalTypes: "Thargoid");
+        systems.Add(astrophel);
+        systems.Add(new StarSystem(new StarSystemId(2), "SOME SYSTEM", new GalacticCoordinates(5000, 0, 0), SystemSurveyState.FssScanned));
+
+        var bodies = new InMemoryBodyRepository();
+        bodies.Add(new CelestialBody(
+            new CelestialBodyId(Guid.NewGuid()),
+            new StarSystemId(2),
+            "SOME SYSTEM 8 A",
+            BodyKind.Moon,
+            null,
+            null,
+            null,
+            400,
+            ScanStatus.FssScanned,
+            WorthDss: true));
+        bodies.Add(new CelestialBody(
+            new CelestialBodyId(Guid.NewGuid()),
+            new StarSystemId(2),
+            "SOME SYSTEM 2",
+            BodyKind.Planet,
+            null,
+            "Earthlike body",
+            null,
+            600,
+            ScanStatus.FssScanned,
+            WorthDss: true));
+
+        var atlas = new AtlasService();
+        var hits = await atlas.FindRaxxlaIntelAsync(systems, bodies);
+
+        Assert.NotEmpty(hits);
+        Assert.Contains(hits, h => h.Type == "Name" && h.SystemName == "ASTROPHEL PRIME");
+        Assert.Contains(hits, h => h.Type == "Signal" && h.Reason.Contains("Thargoid"));
+        Assert.Contains(hits, h => h.Type == "Body" && h.Target == "SOME SYSTEM 8 A" && h.Reason.Contains("8th moon"));
+        Assert.Contains(hits, h => h.Type == "Body" && h.Target == "SOME SYSTEM 2" && h.Reason.Contains("Earthlike"));
+        Assert.Contains(hits, h => h.Type == "Proximity");
+    }
+
+    [Fact]
     public async Task SearchGate_PrefersDenseUnsearchedNeighbourhood()
     {
         var systems = new InMemorySystemRepository();

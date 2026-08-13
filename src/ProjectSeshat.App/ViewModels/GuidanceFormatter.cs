@@ -8,17 +8,45 @@ namespace ProjectSeshat.App.ViewModels;
 /// </summary>
 public static class GuidanceFormatter
 {
-    /// <summary>The short one-line caption for the overlay, e.g. "JUMP TO SOL".</summary>
+    /// <summary>The short one-line caption for the overlay.</summary>
     public static string OverlayTitle(CrawlStep? step)
-        => step is null ? "NO NEXT MOVE" : $"{step.Action?.ToUpperInvariant()} → {step.Target?.ToUpperInvariant()}";
+    {
+        if (step is null)
+        {
+            return "NO NEXT MOVE";
+        }
 
-    /// <summary>The supporting line: the reason (and DSS detail) for the current step.</summary>
+        return step.Action switch
+        {
+            "Honk" => $"HONK {step.Target?.ToUpperInvariant()}",
+            "FSS" => "INSPECT THE TARGETED SIGNAL",
+            "DSS" => $"DSS TARGETED BODY",
+            "Back-track" => $"BACK-TRACK TO {step.Target?.ToUpperInvariant()}",
+            "Jump" => $"JUMP TO {step.Target?.ToUpperInvariant()}",
+            _ => $"{step.Action?.ToUpperInvariant()} → {step.Target?.ToUpperInvariant()}"
+        };
+    }
+
+    /// <summary>
+    /// The supporting line: names the target (body or system), then the reason/why it matters.
+    /// </summary>
     public static string OverlayDetail(CrawlStep? step)
-        => step is null
-            ? "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl."
-            : string.IsNullOrWhiteSpace(step.Detail)
-                ? step.Reason ?? ""
-                : $"{step.Reason} \u2014 {step.Detail}";
+    {
+        if (step is null)
+        {
+            return "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
+        }
+
+        var targetLabel = step.Action switch
+        {
+            "FSS" => $"signal in {step.Target}",
+            "DSS" => $"body {step.Target}",
+            _ => $"{step.Target}"
+        };
+
+        var reason = string.IsNullOrWhiteSpace(step.Detail) ? step.Reason ?? "" : $"{step.Reason} \u2014 {step.Detail}";
+        return $"{targetLabel}. {reason}";
+    }
 
     /// <summary>
     /// A natural-language transcript for the voice pinger, e.g. "Jump to Sol, one hundred and two
@@ -34,8 +62,8 @@ public static class GuidanceFormatter
         return step.Action switch
         {
             "Honk" => $"Arrived at {step.Target}. Run the discovery scan, then check for signals.",
-            "FSS" => $"Run the full spectrum scanner at {step.Target} to resolve the signals.{SignalSuffix(step)}",
-            "DSS" => $"Map the body {step.Target} with the detailed surface scanner.{DssSuffix(step)}",
+            "FSS" => $"Target the signal, then run the full spectrum scanner at {step.Target} to resolve it.{SignalSuffix(step)}",
+            "DSS" => $"Target the body {step.Target}, then map it with the detailed surface scanner.{DssSuffix(step)}",
             "Back-track" => $"All nearby stars are searched. Back-track to {step.Target}.",
             "Jump" => $"Nothing interesting here. Jump to {step.Target}.{DistanceSuffix(step)}",
             _ => $"{step.Action} at {step.Target}."

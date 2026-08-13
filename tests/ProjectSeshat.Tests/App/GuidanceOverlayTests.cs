@@ -13,7 +13,7 @@ public sealed class GuidanceFormatterTests
 
         var title = GuidanceFormatter.OverlayTitle(step);
 
-        Assert.Equal("JUMP → SOL", title);
+        Assert.Equal("JUMP TO SOL", title);
     }
 
     [Fact]
@@ -21,13 +21,36 @@ public sealed class GuidanceFormatterTests
         => Assert.Equal("NO NEXT MOVE", GuidanceFormatter.OverlayTitle(null));
 
     [Fact]
-    public void OverlayDetail_CombinesReasonAndDetail()
+    public void OverlayTitle_FssAndDss_UseInspectPhrasing()
+    {
+        Assert.Equal("INSPECT THE TARGETED SIGNAL",
+            GuidanceFormatter.OverlayTitle(new CrawlStep("FSS", "Sag A*", "resolve")));
+        Assert.Equal("DSS TARGETED BODY",
+            GuidanceFormatter.OverlayTitle(new CrawlStep("DSS", "Sag A* 1", "map")));
+        Assert.Equal("HONK LHS 3447",
+            GuidanceFormatter.OverlayTitle(new CrawlStep("Honk", "LHS 3447", "scan")));
+    }
+
+    [Fact]
+    public void OverlayDetail_NamesTargetThenReason()
     {
         var step = new CrawlStep("FSS", "Sag A*", "Resolve the signals", "Biological,Geological");
 
         var detail = GuidanceFormatter.OverlayDetail(step);
 
-        Assert.Equal("Resolve the signals \u2014 Biological,Geological", detail);
+        Assert.StartsWith("signal in Sag A*.", detail);
+        Assert.Contains("Biological,Geological", detail);
+    }
+
+    [Fact]
+    public void OverlayDetail_Dss_NamesTheBody()
+    {
+        var step = new CrawlStep("DSS", "Sag A* 1", "Terraformable world");
+
+        var detail = GuidanceFormatter.OverlayDetail(step);
+
+        Assert.StartsWith("body Sag A* 1.", detail);
+        Assert.Contains("Terraformable world", detail);
     }
 
     [Fact]
@@ -39,9 +62,9 @@ public sealed class GuidanceFormatterTests
     {
         Assert.Equal("Arrived at Sol. Run the discovery scan, then check for signals.",
             GuidanceFormatter.Transcript(new CrawlStep("Honk", "Sol", "Arrived")));
-        Assert.Equal("Run the full spectrum scanner at Sol to resolve the signals. Signals detected: Biological.",
+        Assert.Equal("Target the signal, then run the full spectrum scanner at Sol to resolve it. Signals detected: Biological.",
             GuidanceFormatter.Transcript(new CrawlStep("FSS", "Sol", "Honk detected signals", "Biological")));
-        Assert.Equal("Map the body Sol 1 with the detailed surface scanner. Reason: Terraformable world.",
+        Assert.Equal("Target the body Sol 1, then map it with the detailed surface scanner. Reason: Terraformable world.",
             GuidanceFormatter.Transcript(new CrawlStep("DSS", "Sol 1", "DSS in Sol", "Terraformable world")));
         Assert.Equal("All nearby stars are searched. Back-track to Sol.",
             GuidanceFormatter.Transcript(new CrawlStep("Back-track", "Sol", "All nearby stars searched")));
@@ -65,8 +88,8 @@ public sealed class GuidanceOverlayViewModelTests
 
         viewModel.SetStep(new CrawlStep("Jump", "Sol", "Nearest unsearched star within reach"));
 
-        Assert.Equal("JUMP → SOL", viewModel.TitleText);
-        Assert.Equal("Nearest unsearched star within reach", viewModel.DetailText);
+        Assert.Equal("JUMP TO SOL", viewModel.TitleText);
+        Assert.Equal("Sol. Nearest unsearched star within reach", viewModel.DetailText);
         Assert.Contains("Jump to Sol", lastTranscript);
     }
 

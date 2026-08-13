@@ -183,7 +183,7 @@ public sealed class KeyAutomationServiceTests
     }
 
     [Fact]
-    public void AutoTargetNextStar_InSystemWork_NoInputSent()
+    public void AutoTargetNextStar_Fss_TargetsTheSignal()
     {
         var input = new FakeInput { EliteInForeground = true };
         var (bindsDir, _) = CreateTempBinds(BindsXml);
@@ -194,7 +194,29 @@ public sealed class KeyAutomationServiceTests
 
             service.AutoTargetNextStar(new CrawlStep("FSS", "Sol", "resolve signals"));
 
-            Assert.Empty(input.Pressed);
+            Assert.Contains("Key_T", input.Pressed);
+            Assert.DoesNotContain("Key_J", input.Pressed);
+        }
+        finally
+        {
+            Directory.Delete(bindsDir, recursive: true);
+        }
+    }
+
+    [Fact]
+    public void AutoTargetNextStar_Dss_TargetsTheBody()
+    {
+        var input = new FakeInput { EliteInForeground = true };
+        var (bindsDir, _) = CreateTempBinds(BindsXml);
+        try
+        {
+            var service = NewService(input, bindsDir, BindsXml);
+            service.TryEnable();
+
+            service.AutoTargetNextStar(new CrawlStep("DSS", "Sol 1", "Terraformable world"));
+
+            Assert.Contains("Key_T", input.Pressed);
+            Assert.DoesNotContain("Key_J", input.Pressed);
         }
         finally
         {

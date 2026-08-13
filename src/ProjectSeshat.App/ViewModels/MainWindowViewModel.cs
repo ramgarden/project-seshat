@@ -75,7 +75,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         _voicePinger = voicePinger ?? new SilentVoicePinger();
         Guidance = new GuidanceOverlayViewModel();
         SearchGuide.CrawlUpdated += OnCrawlUpdated;
-        OverlayVisible = _voicePinger.IsAvailable;
+        // The SearchGuide already refreshed during construction (before this subscription), so
+        // re-raise so the overlay + auto-target get the very first step without waiting for an import.
+        SearchGuide.Refresh();
+        // Overlay is opt-in, not default-on: an always-on-top transparent window floating over the
+        // game adds compositor/GPU overhead that can make the game laggy. The sidebar toggle shows it.
+        OverlayVisible = false;
 
         KeybindSetup = new KeybindSetupViewModel(_keyAutomation);
 

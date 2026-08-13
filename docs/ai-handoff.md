@@ -58,6 +58,8 @@ The **EDDN transport is crash-hardened**: `NetMqEddnTransport` reads the full mu
 
 Community discoveries are persisted as a **bounded, deduplicated summary** — not raw EDDN. `CommunityService` buffers system sightings in memory and flushes them in batches to `ICommunityDiscoveryRepository` (EF `CommunityDiscoveries` table, keyed by a unique `SystemName`, `AddCommunityDiscoveries` migration) on a 10-second timer and on stop; then it prunes to 250,000 rows and 180 days of age, so the local SQLite database stays constant even at full relay volume. The dashboard shows the summary (`CommunityDiscoveryCount`) and the most recently reported systems (`CommunityRecentDiscoveries`, a wrap of name chips). Persisting raw EDDN is deliberately avoided.
 
+To keep the app smooth while playing, the EDDN `Changed` notification is **coalesced to ~4/s** (`OnEventReceived` throttles via `_lastChangedTick`, `ChangedIntervalMs = 250`), so a live-relay burst never floods the Avalonia binding layer. Distinct events (Start/Stop/connection change/flush/transport error) still raise `Changed` immediately.
+
 A file logger (`SeshatLog`, `src/ProjectSeshat.App/SeshatLog.cs`) writes timestamped lines plus every unhandled/unobserved exception to `%APPDATA%\ProjectSeshat\logs\seshat.log`; it installs AppDomain + TaskScheduler crash handlers on startup. The EDDN toggle button uses the standard action-button palette with explicit `/template/ ContentPresenter` hover/pressed overrides so the Fluent theme's default layer can't wash it out.
 
 
@@ -126,7 +128,10 @@ Repository contracts accept a `CancellationToken`; persistence implementations m
 - `GetSurveySnapshotAsync` — a spatial snapshot (reference coordinates, surveyed systems, surveyed cells).
 - `RankUndiscoveredRegionsAsync` — ranks largely uncharted cells near the surveyed frontier (Milestone 1.0).
 - `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Search Guide page (Milestone 1.1).
-- `BuildOutwardCrawlAsync` / `RecommendSearchGateAsync` — the **systematic outward survey** (Milestone 1.9): an outward crawl from a recommended gate, nearest-unsearched-first, auto-advancing the hop when a system has nothing left to FSS/DSS, and back-tracking through charted stars when the local neighbourhood is exhausted. Returns an `OutwardCrawl` (recommended `SearchGate` + score/reasoning, ordered `CrawlHop` route, and a single `CrawlStep` next move). The Search Guide page shows the gate and next move; both refresh on journal import. Gate scoring favours charted systems with dense unsearched neighbours, frontier proximity, reachability, and low community footprint.
+- `BuildOutwardCrawlAsync` / `RecommendSearchGateAsync` / `RecommendSearchGatesAsync` — the **systematic outward survey** (Milestone 1.9): an outward crawl from a recommended gate, nearest-unsearched-first, auto-advancing the hop when a system has nothing left to FSS/DSS, and back-tracking through charted stars when the local neighbourhood is exhausted. Returns an `OutwardCrawl` (recommended `SearchGate` + score/reasoning, ordered `CrawlHop` route, and a single `CrawlStep` next move). The Search Guide page shows the gate, the best-nearest gate (`SearchGateSuggestions`), and the next move; both refresh on journal import. Gate scoring favours charted systems with dense unsearched neighbours, frontier proximity, reachability, and low community footprint.
+- `FindRaxxlaIntelAsync` — **community Raxxla search intel** (Milestone 1.13): scans known systems/bodies and returns ranked `RaxxlaIntelHit`s. Criteria come from `Core/Domain/RaxxlaSearchIntel.cs` (notable body classes, suspicious signal types, lore-name terms, the Sol 200-ly hunt bubble, and the 8th-moon Dark Wheel clue), distilled from **docs/raxxla-search-criteria.md** (Great Raxxla Potato Hunt playbook + lore wiki, sources cited). These are investigation *priorities*, not claimed locations. The Search Guide renders a "RAXXLA INTEL" panel from these.
+
+The **overlay auto-updates with the next thing to do** on every journal import (and on launch): `SearchGuide.Refresh()` → `CrawlUpdated` → `MainWindowViewModel.OnCrawlUpdated` → overlay + voice + auto-target. The next-step (`BuildNextStep`) is **intel-aware** — suspicious FSS signals and intel-flagged bodies (8th moons / notable classes) are surfaced in the step's reason, and the outward jump plot (`BuildCrawlRoute`) **prefers intel-flagged systems** (lore names, suspicious signals, Sol-bubble systems) over mere nearest, so the search bubble heads at interesting systems first.
 
 Presentation lives in `src/ProjectSeshat.App/ViewModels/SearchGuideViewModel.cs` (guide lists + "why" text) and `Views/SearchGuideView.axaml`, with the galaxy map in `GalaxyMapViewModel.cs` / `GalaxyMapView.axaml`. `MainWindowViewModel` wires both pages into navigation (Search Guide is the landing page) and refreshes them whenever journal data is imported.
 
@@ -148,8 +153,9 @@ The **in-game guidance overlay** (`Views/GuidanceOverlayWindow.cs`) is an always
 
 - Text/TTS copy is derived offline-testably in `GuidanceFormatter`/`GuidanceOverlayViewModel` (pure logic over the 1.9 `CrawlStep`), so overlay text and the voice transcript are fully unit-tested.
 - **Voice pings**: `IVoicePinger` + `WindowsSpeechVoicePinger` (System.Speech TTS, Windows-only, fails safe) and `SilentVoicePinger` for tests/non-Windows. The main window has a "Speak next step" button; steps are spoken automatically when the overlay is visible.
-- **Overlay toggle** lives in the sidebar footer; visibility is owned by `MainWindowViewModel.OverlayVisible` and the window is shown/hidden in `App.CreateMainWindow` on property change.
-- **Gate picker**: the Search Guide's recommended-gate card has a "Use as gate" button (`SelectRecommendedGateCommand`) that anchors the outward crawl at that system via `gateSystemId`, plus a "Clear" path through the same button.
+- **Overlay toggle** lives in the sidebar footer; visibility is owned by `MainWindowViewModel.OverlayVisible` and the window is shown/hidden in `App.CreateMainWindow` on property change. **Defaults to OFF** — an always-on-top transparent window floating over the game adds compositor/GPU overhead that can make the game laggy, so the user opts in with the "Show overlay" toggle each session.
+- **Gate picker**: the Search Guide's recommended-gate card has a "Use as gate" button (`SelectRecommendedGateCommand`) that anchors the outward crawl at that system via `gateSystemId`, plus a "Clear" path through the same button. There's also a **best-nearest gate** card ("Use as gate (nearest)") `SelectNearestGateCommand`. The crawl defaults to starting from the **current system** unless a gate is chosen.
+- **Raxxla intel panel**: Search Guide shows a "RAXXLA INTEL" column (`RaxxlaIntelItems`) built by `AtlasService.FindRaxxlaIntelAsync`, using `Core/Domain/RaxxlaSearchIntel.cs` criteria. See `docs/raxxla-search-criteria.md` for the community research and sources.
 - **Position persistence is crash-safe**: the overlay saves its screen position to `overlay-position.json` (beside the DB, via `OverlayPositionStore`) **immediately on `WM_MOVE`/`WM_EXITSIZEMOVE` from the Win32 message loop** (`GuidanceOverlayWindow.WinProc` → `SaveFromNativeRect`), then also on Avalonia's `PositionChanged` and on window close. Do NOT rely on Avalonia `Window.PositionChanged` alone for drags — native `HTCAPTION` drags don't reliably raise it, so the Win32 `WM_MOVE` path is the primary saver. This is what keeps the dragged position after a crash.
 
 The window/TTS behaviour itself requires manual on-device validation (can't be exercised in this sandbox); all derivation logic is covered by unit tests. **Milestone 1.11 (keybinding auto-targeting) is also implemented** — see below.
@@ -165,6 +171,13 @@ The window/TTS behaviour itself requires manual on-device validation (can't be e
 - The main-window sidebar shows an "Enable auto-target" toggle (with an active on-state) and status text (the resolved keys) or the fallback note. Automatically fires on crawl-step changes when enabled.
 
 The parser/resolver/automation decision logic is unit-tested offline with fakes; the real `SendInput` + foreground detection need an on-device smoke test with ED running and a real `*.binds` file.
+
+#### Auto-target in-system work (Milestone 1.12)
+
+The overlay now always reflects exactly what to do next inside the current system, and auto-targeting follows it:
+
+- `GuidanceFormatter` phrases in-system steps so the caption names the action against the target: `HONK <star>`, `INSPECT THE TARGETED SIGNAL`, `DSS TARGETED BODY` (plus `JUMP/TO BACK-TRACK TO <star>`). Detail lines name the target (`signal in <system>` / `body <name>`) then the reason; TTS transcripts match ("Target the signal, then run the FSS…").
+- `KeyAutomationService.AutoTargetNextStar` now sends the **target-selection key for FSS and DSS steps too** (not just Jump/Back-track), so a suspicious body/signal is targeted in-game when bindings are armed and ED is focused. Jump/Back-track still target + charge the hyperjump afterwards.
 
 ### Keybind setup assistant
 
@@ -227,7 +240,7 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (106 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, the Atlas search guide tiers, overlay/voice/auto-targeting logic, and the guidance overlay position store. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (137 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, the Atlas search guide + crawl tiers, Raxxla intel scoring, overlay/voice/auto-targeting logic, and the guidance overlay position store. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
@@ -241,7 +254,7 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 
 ## Recommended next work
 
-Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestones 1.9 (outward search), 1.10 (overlay + voice), and 1.11 (keybinding auto-targeting) are implemented.** Remaining roadmap candidates are the "Next" items (Spansh route plotting, guided-search filtering, recently-discovered views). The auto-targeting device layer needs an on-device smoke test (ED present + a real `.binds` file). Other next steps:
+Follow the `Next` / next-milestone sections in [roadmap.md](roadmap.md). **Milestones 1.9 (outward search), 1.10 (overlay + voice), 1.11 (keybinding auto-targeting + setup assistant), 1.12 (auto-target in-system work), and 1.13 (community Raxxla search intel) are implemented.** Remaining roadmap candidates are the "Next" items (Spansh route plotting, guided-search filtering, recently-discovered views). The auto-targeting device layer needs on-device smoke tests (ED present + a real `.binds` file). The Raxxla intel is criteria-derived, not a proven lead — see `docs/raxxla-search-criteria.md`. Other next steps:
 
 - Add a source-of-truth Atlas Survey listing and richer FSS/DSS detail/filtering.
 - Expand unit/integration test coverage and add CI/formatting (Quality section).

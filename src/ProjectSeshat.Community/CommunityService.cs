@@ -27,6 +27,7 @@ public sealed class CommunityService : IDisposable
     private IReadOnlyList<string> _recentDiscoveries = Array.Empty<string>();
     private bool _disposed;
     private Timer? _flushTimer;
+    private long _lastChangedTick; // coalesces per-event ChChanged to keep UI/DB work bounded
 
     public CommunityService(EddnListener? listener = null, ICommunityDiscoveryRepository? discoveryRepository = null)
     {
@@ -143,8 +144,17 @@ public sealed class CommunityService : IDisposable
             _sightings[eddnEvent.StarSystem] = new Sight(eddnEvent.Position, eddnEvent.ReportedAt);
         }
 
-        Changed?.Invoke(this, EventArgs.Empty);
+        // The relay can burst thousands of frames/second; raise Changed at most ~4x/sec so the
+        // UI binding layer and any consumers never get drowned while playing.
+        var now = Environment.TickCount64;
+        var last = Volatile.Read(ref _lastChangedTick);
+        if (now - last >= ChangedIntervalMs && Interlocked.CompareExchange(ref _lastChangedTick, now, last) == last)
+        {
+            Changed?.Invoke(this, EventArgs.Empty);
+        }
     }
+
+    private const long ChangedIntervalMs = 250;
 
     private void StartFlushTimer()
     {

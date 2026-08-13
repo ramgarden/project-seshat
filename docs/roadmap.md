@@ -131,6 +131,24 @@ Goal: use the commander's actual ED bindings so the player only engages the jump
 - [x] Core logic (parser, path resolver, automation decision-making) fully unit-tested offline with injected fakes; only the real `SendInput`/foreground detection needs an on-device smoke test.
 - [x] **Keybind setup assistant** (`KeybindSetupView`/`KeybindSetupViewModel`, sidebar entry): detects/parses current binds (respecting `StartPreset.start` via `StartPresetResolver`), shows the resolved target/jump keys, offers a live **Test** press (game must be focused), and — when unusable — can write a **minimal default binds** file (`BindingsWriter`, opt-in, `Seshat.Auto.4.0`, sparse so it doesn't clobber other controls, requires an ED restart) or guide the player through ED's in-game Controls screen, then **Re-detect**.
 
+## Milestone 1.12 — Auto-target in-system work & override the overlay's next action
+
+Goal: make the overlay always name exactly what to do next inside the current system, and auto-target suspicious signals/bodies so the player inspects or maps the right thing.
+
+- [x] Overlay auto-shows the next in-system action (Honk needed → `HONK <star>`; FSS needed → `INSPECT THE TARGETED SIGNAL`; DSS → `DSS TARGETED BODY`) with the target name.
+- [x] Auto-targeting now also drives FSS/DSS steps: it sends the target-selection key for the suspicious body/signal (game focused + bindings armed), so the overlay's instruction matches the targeted object.
+- [x] Overlay detail lines name the target (`signal in <system>` / `body <name>`) and the reason; TTS transcripts updated to match ("Target the signal, then run the FSS…").
+
+## Milestone 1.13 — Community Raxxla search intel
+
+Goal: apply the community's actual hunt criteria (Great Raxxla Potato Hunt playbook + lore wiki) so the search guide flags what's worth investigating.
+
+- [x] Curated criteria in Core (`RaxxlaSearchIntel`): notable body classes, suspicious signal terms, lore-name terms, Sol 200-ly hunt bubble, and the 8th-moon Dark Wheel clue — pure, unit-tested matching.
+- [x] `AtlasService.FindRaxxlaIntelAsync` scans known systems/bodies and returns ranked `RaxxlaIntelHit`s with reasons.
+- [x] Search Guide adds a **RAXXLA INTEL** panel (tagged MAP/FSS/LORE/BUBBLE entries) refreshed on journal import.
+- [x] Research captured in `docs/raxxla-search-criteria.md` with sources cited; the app's intel is presented as priorities-to-investigate, not claimed locations.
+- [x] The **overlay auto-updates the next thing to do** on launch and every journal import, and is **intel-aware**: suspicious FSS signals / intel-flagged bodies drive the next step's wording, and the outward jump plot prefers intel-flagged systems (lore names, suspicious signals, Sol-bubble systems) over nearest-first.
+
 ## Next
 
 - [ ] Plot Spansh routes into the search guide jump plotter.

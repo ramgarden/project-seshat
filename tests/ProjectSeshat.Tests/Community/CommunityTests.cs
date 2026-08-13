@@ -108,6 +108,32 @@ public sealed class EddnMessageParserTests
     }
 
     [Fact]
+    public void CommunityService_CoalescesChangedNotifications_UnderEventBursts()
+    {
+        using var transport = new FakeTransport("""
+        {"$schemaRef":"https://eddn.edcd.io/schemas/journal/1","message":{"timestamp":"2024-01-01T00:00:00Z","event":"FSDJump","StarSystem":"LHS 3447"}}
+        """);
+        using var listener = new EddnListener(transport);
+        using var repository = new InMemoryDiscoveryRepository();
+        using var service = new CommunityService(listener, repository);
+
+        var notified = 0;
+        service.Changed += (_, _) => notified++;
+        service.Start();
+
+        // Simulate a relay burst: many events delivered on the same tick should produce at most
+        // one Changed notification (the throttle is meant to keep the UI layer calm while playing).
+        for (var i = 0; i < 200; i++)
+        {
+            transport.Raise();
+        }
+
+        // Start() already delivered one message, so the burst is on top of it.
+        Assert.Equal(201, service.ReceivedCount);
+        Assert.True(notified <= 5, $"expected a coalesced notification count, got {notified}");
+    }
+
+    [Fact]
     public void CommunityService_BuffersAndPersistsSightingsOnStop()
     {
         var now = DateTimeOffset.UtcNow;
@@ -269,6 +295,8 @@ public sealed class EddnMessageParserTests
 #pragma warning restore CS0067
 
         public void Start() => MessageReceived?.Invoke(_line);
+
+        public void Raise() => MessageReceived?.Invoke(_line);
 
         public void Stop()
         {

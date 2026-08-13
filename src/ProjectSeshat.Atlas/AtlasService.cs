@@ -58,7 +58,10 @@ public sealed record CrawlHop(
 public sealed record CrawlStep(string Action, string Target, string Reason, string? Detail = null);
 
 /// <summary>A recommended starting point for an outward survey, derived from current findings.</summary>
-public sealed record SearchGate(string SystemName, GalacticCoordinates Position, double Score, string Reasoning);
+public sealed record SearchGate(string SystemName, GalacticCoordinates Position, double Score, double DistanceLy, string Reasoning);
+
+/// <summary>The two useful gate recommendations: the best overall, and the best that's near the commander.</summary>
+public sealed record SearchGateSuggestions(SearchGate? Best, SearchGate? BestNearest);
 
 /// <summary>
 /// The full state of the systematic outward survey: a recommended gate, the ordered outward
@@ -332,10 +335,75 @@ public sealed class AtlasService
     }
 
     /// <summary>
-    /// Recommends a starting system for a systematic outward survey, derived from current findings.
+    /// Scans the current findings for things the community considers "worth investigating" while
+    /// hunting Raxxla: notable body classes, 8th-moon designations, unusual signal types, lore-name
+    /// matches, and anything inside the Sol-centred hunt bubble. Returns hits ranked by priority.
+    /// </summary>
+    public async Task<IReadOnlyList<RaxxlaIntelHit>> FindRaxxlaIntelAsync(
+        IStarSystemRepository systemRepository,
+        ICelestialBodyRepository? bodyRepository = null,
+        int maxHits = 50,
+        CancellationToken cancellationToken = default)
+    {
+        var hits = new List<RaxxlaIntelHit>();
+        var systems = await systemRepository.ListAsync(100000, cancellationToken);
+
+        foreach (var system in systems)
+        {
+            string systemName = system.Name;
+
+            if (RaxxlaSearchIntel.IsWithinSolSearchArea(system.Position))
+            {
+                hits.Add(new RaxxlaIntelHit(
+                    "Proximity", systemName, systemName,
+                    "Inside the Sol hunt bubble (<200 ly) — the community search area",
+                    1));
+            }
+
+            if (RaxxlaSearchIntel.ReasonForLoreName(systemName) is { } loreReason)
+            {
+                hits.Add(new RaxxlaIntelHit("Name", systemName, systemName, loreReason, 5));
+            }
+
+            if (RaxxlaSearchIntel.ReasonForSignalTypes(system.SignalTypes) is { } signalReason && system.NonBodySignals > 0)
+            {
+                hits.Add(new RaxxlaIntelHit("Signal", systemName, system.Name, signalReason, 4));
+            }
+        }
+
+        if (bodyRepository is not null)
+        {
+            var bodies = await bodyRepository.ListDssCandidatesAsync(5000, cancellationToken);
+            var systemNameById = systems.ToDictionary(s => s.Id, s => s.Name);
+
+            foreach (var body in bodies)
+            {
+                var systemName = systemNameById.TryGetValue(body.SystemId, out var name) ? name : "Unknown system";
+
+                if (RaxxlaSearchIntel.ReasonForBodyClass(body.PlanetClass) is { } bodyReason)
+                {
+                    hits.Add(new RaxxlaIntelHit("Body", systemName, body.Name, bodyReason, 3));
+                }
+
+                if (RaxxlaSearchIntel.ReasonForEighthMoon(body.Name) is { } moonReason)
+                {
+                    hits.Add(new RaxxlaIntelHit("Body", systemName, body.Name, moonReason, 5));
+                }
+            }
+        }
+
+        return hits
+            .OrderByDescending(h => h.Priority)
+            .ThenBy(h => h.SystemName, StringComparer.OrdinalIgnoreCase)
+            .Take(maxHits)
+            .ToList();
+    }
+
+    /// <summary>
+    /// Recommends starting systems for a systematic outward survey, derived from current findings.
     /// Candidates are scored by the density of unsearched neighbours, proximity to high-scoring
-    /// frontier regions, reachability from the commander now, and (when community data is present)
-    /// how little of the area the wider playerbase has already been in.
+    /// frontier regions, and (when community data is present) how little of the area the wider
+    /// playerbase has already been in. Returns the single best overall candidate.
     /// </summary>
     public async Task<SearchGate?> RecommendSearchGateAsync(
         IStarSystemRepository systemRepository,
@@ -345,11 +413,48 @@ public sealed class AtlasService
         double frontierReachLy = 500,
         CancellationToken cancellationToken = default)
     {
+        var gates = await ScoreSearchGatesAsync(systemRepository, navigationRepository, communityRepository, gateRadiusLy, frontierReachLy, cancellationToken);
+        return gates.FirstOrDefault();
+    }
+
+    /// <summary>
+    /// Recommends both the best starting system overall and the best one nearest the commander's
+    /// current position (so a player can start searching right now without a long trip). Each
+    /// carries its score, distance, and the reasoning behind it.
+    /// </summary>
+    public async Task<SearchGateSuggestions> RecommendSearchGatesAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository = null,
+        ICommunityDiscoveryRepository? communityRepository = null,
+        double gateRadiusLy = 100,
+        double frontierReachLy = 500,
+        CancellationToken cancellationToken = default)
+    {
+        var gates = await ScoreSearchGatesAsync(systemRepository, navigationRepository, communityRepository, gateRadiusLy, frontierReachLy, cancellationToken);
+
+        var best = gates.FirstOrDefault();
+
+        // Best nearest: the top-scoring gate close enough to depart from right now. Gates are
+        // sorted by score, so the first one within a comfortable radius is the best nearby option.
+        var bestNearest = gates.FirstOrDefault(g => g.DistanceLy <= gateRadiusLy)
+                          ?? gates.OrderBy(g => g.DistanceLy).FirstOrDefault();
+
+        return new SearchGateSuggestions(best, bestNearest);
+    }
+
+    private async Task<IReadOnlyList<SearchGate>> ScoreSearchGatesAsync(
+        IStarSystemRepository systemRepository,
+        INavigationStateRepository? navigationRepository,
+        ICommunityDiscoveryRepository? communityRepository,
+        double gateRadiusLy,
+        double frontierReachLy,
+        CancellationToken cancellationToken)
+    {
         var allSystems = await systemRepository.ListAsync(100000, cancellationToken);
         var positioned = allSystems.Where(s => s.Position is not null).ToList();
         if (positioned.Count == 0)
         {
-            return null;
+            return Array.Empty<SearchGate>();
         }
 
         var unsearched = positioned.Where(s => s.SurveyState == SystemSurveyState.Unexplored).ToList();
@@ -357,7 +462,7 @@ public sealed class AtlasService
         var candidates = positioned.Where(s => s.SurveyState != SystemSurveyState.Unexplored).ToList();
         if (candidates.Count == 0)
         {
-            return null;
+            return Array.Empty<SearchGate>();
         }
 
         var reference = await ResolveReferenceAsync(systemRepository, navigationRepository, positioned, cancellationToken);
@@ -370,7 +475,7 @@ public sealed class AtlasService
             community = await communityRepository.ListRecentAsync(100000, cancellationToken);
         }
 
-        SearchGate? best = null;
+        var gates = new List<SearchGate>();
         foreach (var candidate in candidates)
         {
             var position = candidate.Position!;
@@ -392,6 +497,7 @@ public sealed class AtlasService
             }
 
             var communityNearby = community.Count(d => d.Position is not null && Distance(position, d.Position!) <= gateRadiusLy);
+            // Reachability modestly favours being able to start now, but does not dominate score.
             var reachability = 1.0 / (1 + Distance(position, reference) / gateRadiusLy);
 
             var score = (unsearchedNearby * 2.0) + frontierProximity - (communityNearby * 1.0) + (reachability * 0.5);
@@ -406,13 +512,13 @@ public sealed class AtlasService
                             $"{communityNearby} community sighting{(communityNearby == 1 ? "" : "s")} nearby; " +
                             $"{distanceFromCommander:F0} Ly from commander.";
 
-            if (best is null || score > best.Score)
-            {
-                best = new SearchGate(candidate.Name, position, score, reasoning);
-            }
+            gates.Add(new SearchGate(candidate.Name, position, score, distanceFromCommander, reasoning));
         }
 
-        return best;
+        return gates
+            .OrderByDescending(g => g.Score)
+            .ThenBy(g => g.DistanceLy)
+            .ToList();
     }
 
     /// <summary>
@@ -556,14 +662,22 @@ public sealed class AtlasService
         int maxHops)
     {
         var route = new List<CrawlHop>();
-        var remaining = unsearched.OrderBy(s => Distance(reference, s.Position!)).ToList();
+        var remaining = unsearched
+            .OrderBy(s => RaxxlaSearchIntel.IsWithinSolSearchArea(s.Position) ? 0 : 1)
+            .ThenBy(IntelPriority)
+            .ThenBy(s => Distance(reference, s.Position!))
+            .ToList();
         var availableCharted = charted.Where(s => s.Position is not null).ToList();
 
         var cursor = reference;
         while (remaining.Count > 0 && route.Count < maxHops)
         {
+            // Prefer a Raxxla-intel system (lore name / suspicious signal / in the Sol bubble) so
+            // the search-bubble jump plot heads at interesting systems first; distance breaks ties.
             var next = remaining
-                .OrderBy(s => Distance(cursor, s.Position!))
+                .OrderByDescending(s => IntelPriority(s))
+                .ThenBy(s => RaxxlaSearchIntel.IsWithinSolSearchArea(s.Position) ? 0 : 1)
+                .ThenBy(s => Distance(cursor, s.Position!))
                 .First();
 
             var distance = Distance(cursor, next.Position!);
@@ -627,13 +741,24 @@ public sealed class AtlasService
 
                 if (current.SurveyState == SystemSurveyState.Honked && current.NonBodySignals > 0)
                 {
-                    return new CrawlStep(
-                        "FSS", current.Name, "Honk detected signals — resolve them", current.SignalTypes);
+                    // If the honk flagged anything the hunt community calls "unusual", call it out
+                    // so the overlay's next move is to inspect the targeted signal.
+                    var intelSignal = RaxxlaSearchIntel.ReasonForSignalTypes(current.SignalTypes);
+                    var reason = intelSignal is null
+                        ? "Honk detected signals — resolve them"
+                        : $"Honk detected signals — resolve them ({intelSignal})";
+                    return new CrawlStep("FSS", current.Name, reason, current.SignalTypes);
                 }
 
-                if (bodyRepository is not null && await HasDssWorkAsync(currentId, bodyRepository, cancellationToken) is { } dssBody)
+                if (bodyRepository is not null && await FindDssTargetAsync(currentId, bodyRepository, cancellationToken) is { } dssBody)
                 {
-                    return new CrawlStep("DSS", dssBody.Name, $"DSS in {current.Name}", DssReason(dssBody));
+                    // Prefer an intel-flagged body (8th moon / notable class) over a generic candidate.
+                    var intelBody = RaxxlaSearchIntel.ReasonForEighthMoon(dssBody.Name)
+                                    ?? RaxxlaSearchIntel.ReasonForBodyClass(dssBody.PlanetClass);
+                    var reason = intelBody is null
+                        ? $"DSS in {current.Name}"
+                        : $"DSS in {current.Name} — {intelBody}";
+                    return new CrawlStep("DSS", dssBody.Name, reason, DssReason(dssBody));
                 }
             }
         }
@@ -649,14 +774,62 @@ public sealed class AtlasService
         return null;
     }
 
-    private static async Task<CelestialBody?> HasDssWorkAsync(
+    private static async Task<CelestialBody?> FindDssTargetAsync(
         StarSystemId systemId,
         ICelestialBodyRepository bodyRepository,
         CancellationToken cancellationToken)
     {
+        // 1. Any intel-flagged body in the system (8th moon / notable class) wins, even if it
+        //    isn't a normal DSS candidate yet — these are what the hunt wants checked.
+        var bodies = await bodyRepository.FindBySystemIdAsync(systemId, cancellationToken);
+        if (bodies.Count > 0)
+        {
+            var intelBody = bodies
+                .Where(b => b.ScanStatus != ScanStatus.Mapped)
+                .Where(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null
+                            || RaxxlaSearchIntel.ReasonForBodyClass(b.PlanetClass) is not null)
+                .OrderByDescending(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null) // 8th-moon > class
+                .ThenBy(BodyCreditOrder)
+                .FirstOrDefault();
+
+            if (intelBody is not null)
+            {
+                return intelBody;
+            }
+        }
+
+        // 2. Fall back to the normal "worth a DSS" candidate for the system.
         var dss = await bodyRepository.ListDssCandidatesAsync(500, cancellationToken);
         return dss.FirstOrDefault(d => d.SystemId == systemId);
     }
+
+    private static int IntelPriority(StarSystem system)
+    {
+        var score = 0;
+        if (RaxxlaSearchIntel.ReasonForLoreName(system.Name) is not null)
+        {
+            score += 3;
+        }
+
+        if (system.SurveyState == SystemSurveyState.Honked && RaxxlaSearchIntel.ReasonForSignalTypes(system.SignalTypes) is not null)
+        {
+            score += 2;
+        }
+
+        if (RaxxlaSearchIntel.IsWithinSolSearchArea(system.Position))
+        {
+            score += 1;
+        }
+
+        return score;
+    }
+
+    private static int BodyCreditOrder(CelestialBody body)
+        => body.PlanetClass?.Contains("Earthlike", StringComparison.OrdinalIgnoreCase) == true ? 0
+            : body.IsTerraformable == true ? 1
+            : body.PlanetClass?.Contains("Water world", StringComparison.OrdinalIgnoreCase) == true ? 2
+            : body.PlanetClass?.Contains("Ammonia world", StringComparison.OrdinalIgnoreCase) == true ? 3
+            : 4;
 
     private static string DssReason(CelestialBody body)
         => body.IsTerraformable == true
