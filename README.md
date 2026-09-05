@@ -19,7 +19,7 @@ The project name comes from Seshat, the ancient Mesopotamian goddess of writing,
 
 ## Prerequisites
 
-Install the .NET 9 SDK, then restore, build, and test from the repository root:
+Install the .NET 10 SDK, then restore, build, and test from the repository root:
 
 ```powershell
 dotnet restore
@@ -33,5 +33,5 @@ See [architecture.md](docs/architecture.md) and [roadmap.md](docs/roadmap.md) fo
 
 Build: passing
 Tests: passing
-.NET: 9
+.NET: 10
 Status: Alpha

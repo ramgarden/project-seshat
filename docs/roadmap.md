@@ -41,6 +41,9 @@
 - [x] Capture evidence records attached to a research thread as an investigation.
 - [x] Review a thread's captured evidence in the desktop UI.
 
+## Milestone 1.0 — .NET 10 Migration
+- [ ] Migrate solution to .NET 10.
+
 ## Next
 
 - [ ] Identify undiscovered regions via the Atlas boundary.
