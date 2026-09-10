@@ -1,57 +1,64 @@
-# AGENTS.md
+# Project Seshat Agent Instructions
 
 ## Start Here
 
-Before doing anything, read `docs/ai-handoff.md` (start here), `docs/roadmap.md`
-(what's done / next), and `docs/architecture.md` (dependency rules). This tells you
-where work left off without scanning the whole repo. Check `git status --short` too:
-work may be intentionally uncommitted, so preserve unrelated user changes.
+- Read `docs/ai-handoff.md`, `docs/roadmap.md`, and `docs/architecture.md` before changing code.
+- Check `git status --short` and preserve unrelated uncommitted work.
+- Update `docs/ai-handoff.md` and `docs/roadmap.md` when moving a milestone.
 
-Also update `docs/ai-handoff.md` and `docs/roadmap.md` when you move a milestone so
-the next agent can resume instantly.
+## Commands
 
-## Build & Test
+Use the .NET 9 SDK from the repository root:
 
-Run from the repository root with the .NET 9 SDK:
-
-### Build
 ```powershell
+dotnet restore
 dotnet build ProjectSeshat.sln
-```
-
-### Test
-```powershell
 dotnet test ProjectSeshat.sln
-```
-
-### Run
-```powershell
 dotnet run --project src/ProjectSeshat.App
 ```
 
-## EF Core migrations
+Run one test or test class with:
 
-Schema changes go through EF Core migrations (not `EnsureCreated`). To add one:
+```powershell
+dotnet test tests/ProjectSeshat.Tests/ProjectSeshat.Tests.csproj --filter "FullyQualifiedName~<TestName>"
+```
+
+For schema changes, add an EF migration instead of changing the database directly:
 
 ```powershell
 dotnet ef migrations add <Name> --project src/ProjectSeshat.Data
 ```
 
-## Lint & Typecheck
+There is no configured lint, formatter, typechecker, CI, or lockfile command; build and test are the available verification commands.
 
-### Lint
-```powershell
-# Add your linter command here
-```
+## Architecture
 
-### Typecheck
-```powershell
-# Add your typechecker command here
-```
+- `ProjectSeshat.App` owns Avalonia views, view models, composition, and startup; keep domain rules out of presentation.
+- `ProjectSeshat.Core` owns domain records and contracts and has no project dependencies.
+- Feature projects depend only on Core; use Core contracts for cross-feature work.
+- `ProjectSeshat.Data` owns EF entities, `DbContext`, SQLite repositories, and migrations; do not expose EF entities outside Data.
+- `tests/ProjectSeshat.Tests` uses xUnit. Prefer in-memory SQLite for repository tests because it exercises SQLite behavior.
 
-## Notes
+Package versions are managed centrally in `Directory.Packages.props`; never add a version directly to a `.csproj`.
 
-1. Ensure you have .NET SDK installed (`dotnet --version` should be 9.x).
-2. Tests require running the build first.
-3. Use `--configuration Release` for production builds.
-4. Package versions are managed centrally in `Directory.Packages.props`; add versions there, not in `.csproj`.
+## Runtime and Data
+
+- Production startup is `App.CreateViewModel()` → `ProjectSeshatDbContext.Database.Migrate()`; the database is `%APPDATA%\ProjectSeshat\project-seshat.db`.
+- Do not use `EnsureCreated()` for schema changes. The parameterless `MainWindow` constructor is a legacy path that still uses a relative `project-seshat.db` and `EnsureCreated()`; use the production composition path.
+- `ProjectSeshatDbContextFactory` also uses a relative `project-seshat.db`; do not assume EF design-time commands target the AppData database.
+- The journal watcher starts automatically, watches `Journal*.log`, imports each file once, then tails appended bytes. Imports are deduplicated by SHA-256 fingerprint plus file path.
+- The guidance overlay defaults off; its position is saved at `%APPDATA%\ProjectSeshat\overlay-position.json`.
+
+## Tests and Gotchas
+
+- `AppStartupTests` calls production `App.CreateViewModel()` and can create/migrate the user's real AppData database; avoid running it casually on a machine with important local data.
+- Live EDDN connectivity, Windows TTS, and real Elite Dangerous key automation require on-device validation; parser and decision logic should be tested with injected fakes.
+- `JournalReader` derives system IDs with `GetHashCode()`; do not treat them as stable cross-process identities.
+- `SearchGuideViewModel.Refresh()` currently blocks on async work with `.GetAwaiter().GetResult()`; avoid adding more synchronous UI work.
+
+## UI Changes
+
+- The app is dark-themed. Give interactive controls explicit foreground/background and `/template/ ContentPresenter` hover/pressed states; Avalonia's default light hover can make controls disappear.
+- `PathIcon` does not inherit `Foreground`; set it explicitly for every icon state.
+- Keep user-facing labels in view models and application logic out of code-behind.
+- After UI edits, run `dotnet build` and inspect touched `.axaml` for low-contrast colors and labels without explicit foregrounds.
