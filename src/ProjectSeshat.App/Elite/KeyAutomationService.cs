@@ -1,4 +1,5 @@
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 
 namespace ProjectSeshat.App.Elite;
 
@@ -92,7 +93,7 @@ public sealed class KeyAutomationService
     /// the next route star then charges the hyperjump. No-op (falling back to the overlay) when
     /// automation isn't armed or the game isn't focused.
     /// </summary>
-    public void AutoTargetNextStar(CrawlStep step)
+    public void AutoTargetNextStar(NextAction step)
     {
         if (!CanAutoTarget)
         {
@@ -106,8 +107,8 @@ public sealed class KeyAutomationService
 
         switch (step.Action)
         {
-            case "FSS":
-            case "DSS":
+            case NextActionKind.Fss:
+            case NextActionKind.Dss:
                 // Target the body/signal ahead so the player inspects or maps the right thing.
                 if (TargetKey is not null)
                 {
@@ -116,8 +117,8 @@ public sealed class KeyAutomationService
 
                 break;
 
-            case "Jump":
-            case "Back-track":
+            case NextActionKind.Jump:
+            case NextActionKind.BackTrack:
                 if (TargetKey is not null)
                 {
                     _input.Press(TargetKey);

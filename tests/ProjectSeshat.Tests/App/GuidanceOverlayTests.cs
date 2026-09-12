@@ -1,5 +1,6 @@
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 using Xunit;
 
 namespace ProjectSeshat.Tests.App;
@@ -9,9 +10,9 @@ public sealed class GuidanceFormatterTests
     [Fact]
     public void OverlayTitle_UppercasesActionAndTarget()
     {
-        var step = new CrawlStep("Jump", "Sol", "Nearest unsearched star within reach", "210 Ly away");
+        var action = new NextAction(NextActionKind.Jump, "Sol", "Nearest unsearched star within reach", DistanceLy: 210);
 
-        var title = GuidanceFormatter.OverlayTitle(step);
+        var title = GuidanceFormatter.OverlayTitle(action);
 
         Assert.Equal("JUMP TO SOL", title);
     }
@@ -24,19 +25,19 @@ public sealed class GuidanceFormatterTests
     public void OverlayTitle_FssAndDss_UseInspectPhrasing()
     {
         Assert.Equal("INSPECT THE TARGETED SIGNAL",
-            GuidanceFormatter.OverlayTitle(new CrawlStep("FSS", "Sag A*", "resolve")));
+            GuidanceFormatter.OverlayTitle(new NextAction(NextActionKind.Fss, "Sag A*", "resolve")));
         Assert.Equal("DSS TARGETED BODY",
-            GuidanceFormatter.OverlayTitle(new CrawlStep("DSS", "Sag A* 1", "map")));
+            GuidanceFormatter.OverlayTitle(new NextAction(NextActionKind.Dss, "Sag A* 1", "map")));
         Assert.Equal("HONK LHS 3447",
-            GuidanceFormatter.OverlayTitle(new CrawlStep("Honk", "LHS 3447", "scan")));
+            GuidanceFormatter.OverlayTitle(new NextAction(NextActionKind.Honk, "LHS 3447", "scan")));
     }
 
     [Fact]
     public void OverlayDetail_NamesTargetThenReason()
     {
-        var step = new CrawlStep("FSS", "Sag A*", "Resolve the signals", "Biological,Geological");
+        var action = new NextAction(NextActionKind.Fss, "Sag A*", "Resolve the signals", "Biological,Geological");
 
-        var detail = GuidanceFormatter.OverlayDetail(step);
+        var detail = GuidanceFormatter.OverlayDetail(action);
 
         Assert.StartsWith("signal in Sag A*.", detail);
         Assert.Contains("Biological,Geological", detail);
@@ -45,9 +46,9 @@ public sealed class GuidanceFormatterTests
     [Fact]
     public void OverlayDetail_Dss_NamesTheBody()
     {
-        var step = new CrawlStep("DSS", "Sag A* 1", "Terraformable world");
+        var action = new NextAction(NextActionKind.Dss, "Sag A* 1", "Terraformable world");
 
-        var detail = GuidanceFormatter.OverlayDetail(step);
+        var detail = GuidanceFormatter.OverlayDetail(action);
 
         Assert.StartsWith("body Sag A* 1.", detail);
         Assert.Contains("Terraformable world", detail);
@@ -61,15 +62,15 @@ public sealed class GuidanceFormatterTests
     public void Transcript_InterpretsEachAction()
     {
         Assert.Equal("Arrived at Sol. Run the discovery scan, then check for signals.",
-            GuidanceFormatter.Transcript(new CrawlStep("Honk", "Sol", "Arrived")));
+            GuidanceFormatter.Transcript(new NextAction(NextActionKind.Honk, "Sol", "Arrived")));
         Assert.Equal("Target the signal, then run the full spectrum scanner at Sol to resolve it. Signals detected: Biological.",
-            GuidanceFormatter.Transcript(new CrawlStep("FSS", "Sol", "Honk detected signals", "Biological")));
+            GuidanceFormatter.Transcript(new NextAction(NextActionKind.Fss, "Sol", "Honk detected signals", "Biological")));
         Assert.Equal("Target the body Sol 1, then map it with the detailed surface scanner. Reason: Terraformable world.",
-            GuidanceFormatter.Transcript(new CrawlStep("DSS", "Sol 1", "DSS in Sol", "Terraformable world")));
+            GuidanceFormatter.Transcript(new NextAction(NextActionKind.Dss, "Sol 1", "DSS in Sol", "Terraformable world")));
         Assert.Equal("All nearby stars are searched. Back-track to Sol.",
-            GuidanceFormatter.Transcript(new CrawlStep("Back-track", "Sol", "All nearby stars searched")));
+            GuidanceFormatter.Transcript(new NextAction(NextActionKind.BackTrack, "Sol", "All nearby stars searched")));
         Assert.Equal("Nothing interesting here. Jump to Sol. 210 Ly away.",
-            GuidanceFormatter.Transcript(new CrawlStep("Jump", "Sol", "Nearest unsearched", "210 Ly away")));
+            GuidanceFormatter.Transcript(new NextAction(NextActionKind.Jump, "Sol", "Nearest unsearched", Detail: "210 Ly away")));
     }
 
     [Fact]
@@ -86,7 +87,7 @@ public sealed class GuidanceOverlayViewModelTests
         string? lastTranscript = null;
         viewModel.Updated += step => lastTranscript = step.Transcript;
 
-        viewModel.SetStep(new CrawlStep("Jump", "Sol", "Nearest unsearched star within reach"));
+        viewModel.SetStep(new NextAction(NextActionKind.Jump, "Sol", "Nearest unsearched star within reach"));
 
         Assert.Equal("JUMP TO SOL", viewModel.TitleText);
         Assert.Equal("Sol. Nearest unsearched star within reach", viewModel.DetailText);

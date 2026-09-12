@@ -181,6 +181,14 @@
                   <TextBlock Text="{Binding OutwardNextReason}" Foreground="#D2EAF7" FontSize="13" TextWrapping="Wrap" LineHeight="19" />
                 </StackPanel>
               </Border>
+              <Border Background="#08111D" BorderBrush="#F2C14E" BorderThickness="1" CornerRadius="6" Padding="16">
+                <StackPanel Spacing="8">
+                  <TextBlock Classes="stage-label" Text="NEXT RAXXLA MOVE" Foreground="#F2C14E" FontSize="13" FontWeight="SemiBold" />
+                  <TextBlock Text="{Binding RaxxlaMoveTitle}" Foreground="#E5F5FF" FontSize="18" FontWeight="SemiBold" TextWrapping="Wrap" />
+                  <TextBlock Text="{Binding RaxxlaMoveSubtitle}" Foreground="#D2EAF7" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
+                  <TextBlock Text="{Binding RaxxlaMoveDetail}" Foreground="#F2C14E" FontSize="12" TextWrapping="Wrap" LineHeight="18" />
+                </StackPanel>
+              </Border>
               <Border Background="#06221A" BorderBrush="#2C8F6E" BorderThickness="1" CornerRadius="6" Padding="16">
                 <StackPanel Spacing="6">
                   <TextBlock Classes="stage-label" Text="CURRENT POSITION" />

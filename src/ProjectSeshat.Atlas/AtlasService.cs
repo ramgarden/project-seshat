@@ -25,7 +25,8 @@ public sealed record SearchGuide(
     int FssCount,
     int DssCount,
     string? CurrentSystemName = null,
-    GalacticCoordinates? CurrentPosition = null);
+    GalacticCoordinates? CurrentPosition = null,
+    NextAction? NextAction = null);
 
 /// <summary>A system the user should discovery-scan (honk) first.</summary>
 public sealed record HonkTarget(string SystemName, double? DistanceLy);
@@ -46,7 +47,7 @@ public enum CrawlHopKind
     BackTrack
 }
 
-/// <summary>One step in the outward survey crawl (a jump plot entry).</summary>
+/// <summary>A single hop in the outward survey crawl.</summary>
 public sealed record CrawlHop(
     CrawlHopKind Kind,
     string SystemName,
@@ -54,7 +55,7 @@ public sealed record CrawlHop(
     string Reason,
     GalacticCoordinates? ArriveAt);
 
-/// <summary>A single immediate instruction the player should act on now.</summary>
+/// <summary>A single immediate step the player should act on now.</summary>
 public sealed record CrawlStep(string Action, string Target, string Reason, string? Detail = null);
 
 /// <summary>A recommended starting point for an outward survey, derived from current findings.</summary>
@@ -71,9 +72,19 @@ public sealed record SearchGateSuggestions(SearchGate? Best, SearchGate? BestNea
 public sealed record OutwardCrawl(
     SearchGate? RecommendedGate,
     IReadOnlyList<CrawlHop> Route,
-    CrawlStep? NextStep,
+    NextAction? NextAction,
     string? CurrentSystemName,
-    GalacticCoordinates? CurrentPosition);
+    GalacticCoordinates? CurrentPosition)
+{
+    /// <summary>Compatibility alias for the canonical next action.</summary>
+    public CrawlStep? NextStep => NextAction is null
+        ? null
+        : new CrawlStep(
+            NextAction.Action.ToString(),
+            NextAction.Target,
+            NextAction.Reason,
+            NextAction.Detail);
+}
 
 /// <summary>Provides spatial and astronomical research operations for the atlas boundary.</summary>
 public sealed class AtlasService
@@ -286,12 +297,13 @@ public sealed class AtlasService
         // to the centroid of everything already surveyed.
         string? currentSystemName = null;
         GalacticCoordinates? currentPosition = null;
+        StarSystemId? currentSystemId = null;
         if (navigationRepository is not null)
         {
             var state = await navigationRepository.GetAsync(cancellationToken);
-            if (state?.CurrentSystemId is { } currentSystemId)
+            if (state?.CurrentSystemId is { } resolvedCurrentSystemId)
             {
-                var currentSystem = await systemRepository.FindByIdAsync(currentSystemId, cancellationToken);
+                var currentSystem = await systemRepository.FindByIdAsync(resolvedCurrentSystemId, cancellationToken);
                 if (currentSystem?.Position is not null)
                 {
                     currentSystemName = currentSystem.Name;
@@ -331,7 +343,23 @@ public sealed class AtlasService
                 DssReason(b)))
             .ToList();
 
-        return new SearchGuide(honk, fss, dss, honk.Count, fss.Count, dss.Count, currentSystemName, currentPosition);
+        var nextAction = await BuildNextActionAsync(
+            currentSystemId,
+            allSystems,
+            bodyRepository,
+            route: Array.Empty<CrawlHop>(),
+            cancellationToken);
+
+        return new SearchGuide(
+            honk,
+            fss,
+            dss,
+            honk.Count,
+            fss.Count,
+            dss.Count,
+            currentSystemName,
+            currentPosition,
+            nextAction);
     }
 
     /// <summary>
@@ -373,21 +401,20 @@ public sealed class AtlasService
 
         if (bodyRepository is not null)
         {
-            var bodies = await bodyRepository.ListDssCandidatesAsync(5000, cancellationToken);
-            var systemNameById = systems.ToDictionary(s => s.Id, s => s.Name);
-
-            foreach (var body in bodies)
+            foreach (var system in systems)
             {
-                var systemName = systemNameById.TryGetValue(body.SystemId, out var name) ? name : "Unknown system";
-
-                if (RaxxlaSearchIntel.ReasonForBodyClass(body.PlanetClass) is { } bodyReason)
+                var bodies = await bodyRepository.FindBySystemIdAsync(system.Id, cancellationToken);
+                foreach (var body in bodies)
                 {
-                    hits.Add(new RaxxlaIntelHit("Body", systemName, body.Name, bodyReason, 3));
-                }
+                    if (RaxxlaSearchIntel.ReasonForBodyClass(body.PlanetClass) is { } bodyReason)
+                    {
+                        hits.Add(new RaxxlaIntelHit("Body", system.Name, body.Name, bodyReason, 3));
+                    }
 
-                if (RaxxlaSearchIntel.ReasonForEighthMoon(body.Name) is { } moonReason)
-                {
-                    hits.Add(new RaxxlaIntelHit("Body", systemName, body.Name, moonReason, 5));
+                    if (RaxxlaSearchIntel.ReasonForEighthMoon(body.Name) is { } moonReason)
+                    {
+                        hits.Add(new RaxxlaIntelHit("Body", system.Name, body.Name, moonReason, 5));
+                    }
                 }
             }
         }
@@ -571,7 +598,7 @@ public sealed class AtlasService
 
         var route = BuildCrawlRoute(reference, unsearched, charted, neighbourhoodRadiusLy, maxHops);
 
-        var nextStep = await BuildNextStep(
+        var nextStep = await BuildNextActionAsync(
             currentSystemId,
             allSystems,
             bodyRepository,
@@ -582,7 +609,7 @@ public sealed class AtlasService
     }
 
     /// <summary>The immediate step to act on next, preferring in-system work before a jump.</summary>
-    public async Task<CrawlStep?> BuildOutwardNextStepAsync(
+    public async Task<NextAction?> BuildOutwardNextActionAsync(
         IStarSystemRepository systemRepository,
         INavigationStateRepository? navigationRepository = null,
         ICelestialBodyRepository? bodyRepository = null,
@@ -605,9 +632,8 @@ public sealed class AtlasService
             .Where(s => s.SurveyState != SystemSurveyState.Unexplored && s.Position is not null)
             .ToList();
 
-        var route = BuildCrawlRoute(reference, unsearched, charted, neighbourhoodRadiusLy, maxHops: 1);
-
-        return await BuildNextStep(currentSystemId, allSystems, bodyRepository, route, cancellationToken);
+        var route = BuildCrawlRoute(reference, unsearched, charted, neighbourhoodRadiusLy, 1);
+        return await BuildNextActionAsync(currentSystemId, allSystems, bodyRepository, route, cancellationToken);
     }
 
     private static async Task<(string? SystemName, GalacticCoordinates? Position, StarSystemId? SystemId)> ResolveCurrentAsync(
@@ -639,9 +665,9 @@ public sealed class AtlasService
         if (navigationRepository is not null)
         {
             var state = await navigationRepository.GetAsync(cancellationToken);
-            if (state?.CurrentSystemId is { } currentSystemId)
+            if (state?.CurrentSystemId is { } resolvedCurrentSystemId)
             {
-                var currentSystem = await systemRepository.FindByIdAsync(currentSystemId, cancellationToken);
+                var currentSystem = await systemRepository.FindByIdAsync(resolvedCurrentSystemId, cancellationToken);
                 if (currentSystem?.Position is not null)
                 {
                     return currentSystem.Position;
@@ -663,8 +689,8 @@ public sealed class AtlasService
     {
         var route = new List<CrawlHop>();
         var remaining = unsearched
-            .OrderBy(s => RaxxlaSearchIntel.IsWithinSolSearchArea(s.Position) ? 0 : 1)
-            .ThenBy(IntelPriority)
+            .OrderByDescending(RaxxlaPriority)
+            .ThenBy(s => RaxxlaSearchIntel.IsWithinSolSearchArea(s.Position) ? 0 : 1)
             .ThenBy(s => Distance(reference, s.Position!))
             .ToList();
         var availableCharted = charted.Where(s => s.Position is not null).ToList();
@@ -675,7 +701,7 @@ public sealed class AtlasService
             // Prefer a Raxxla-intel system (lore name / suspicious signal / in the Sol bubble) so
             // the search-bubble jump plot heads at interesting systems first; distance breaks ties.
             var next = remaining
-                .OrderByDescending(s => IntelPriority(s))
+                .OrderByDescending(s => RaxxlaPriority(s))
                 .ThenBy(s => RaxxlaSearchIntel.IsWithinSolSearchArea(s.Position) ? 0 : 1)
                 .ThenBy(s => Distance(cursor, s.Position!))
                 .First();
@@ -721,14 +747,13 @@ public sealed class AtlasService
         return route;
     }
 
-    private async Task<CrawlStep?> BuildNextStep(
+    private async Task<NextAction?> BuildNextActionAsync(
         StarSystemId? currentSystemId,
         IReadOnlyList<StarSystem> allSystems,
         ICelestialBodyRepository? bodyRepository,
         IReadOnlyList<CrawlHop> route,
         CancellationToken cancellationToken)
     {
-        // In-system work always wins: honk → FSS → DSS before leaving.
         if (currentSystemId is { } currentId)
         {
             var current = allSystems.FirstOrDefault(s => s.Id == currentId);
@@ -736,29 +761,42 @@ public sealed class AtlasService
             {
                 if (current.SurveyState == SystemSurveyState.Unexplored)
                 {
-                    return new CrawlStep("Honk", current.Name, "Arrived but not yet discovery-scanned");
+                    return new NextAction(
+                        NextActionKind.Honk,
+                        current.Name,
+                        "Arrived but not yet discovery-scanned",
+                        TargetSystem: current.Name);
                 }
 
                 if (current.SurveyState == SystemSurveyState.Honked && current.NonBodySignals > 0)
                 {
-                    // If the honk flagged anything the hunt community calls "unusual", call it out
-                    // so the overlay's next move is to inspect the targeted signal.
-                    var intelSignal = RaxxlaSearchIntel.ReasonForSignalTypes(current.SignalTypes);
-                    var reason = intelSignal is null
-                        ? "Honk detected signals — resolve them"
-                        : $"Honk detected signals — resolve them ({intelSignal})";
-                    return new CrawlStep("FSS", current.Name, reason, current.SignalTypes);
+                    var signalReason = RaxxlaSearchIntel.ReasonForSignalTypes(current.SignalTypes);
+                    var reason = signalReason is null
+                        ? "Honk detected ordinary signals — resolve them with FSS"
+                        : $"Honk detected {signalReason} — resolve them with FSS";
+                    return new NextAction(
+                        NextActionKind.Fss,
+                        current.Name,
+                        reason,
+                        current.SignalTypes,
+                        TargetSystem: current.Name);
                 }
 
-                if (bodyRepository is not null && await FindDssTargetAsync(currentId, bodyRepository, cancellationToken) is { } dssBody)
+                if (bodyRepository is not null &&
+                    await FindDssTargetAsync(currentId, bodyRepository, cancellationToken) is { } dssBody)
                 {
-                    // Prefer an intel-flagged body (8th moon / notable class) over a generic candidate.
-                    var intelBody = RaxxlaSearchIntel.ReasonForEighthMoon(dssBody.Name)
-                                    ?? RaxxlaSearchIntel.ReasonForBodyClass(dssBody.PlanetClass);
-                    var reason = intelBody is null
-                        ? $"DSS in {current.Name}"
-                        : $"DSS in {current.Name} — {intelBody}";
-                    return new CrawlStep("DSS", dssBody.Name, reason, DssReason(dssBody));
+                    var intelReason = RaxxlaSearchIntel.ReasonForEighthMoon(dssBody.Name)
+                                      ?? RaxxlaSearchIntel.ReasonForBodyClass(dssBody.PlanetClass);
+                    var reason = intelReason is null
+                        ? $"DSS candidate in {current.Name}"
+                        : $"DSS candidate in {current.Name} — {intelReason}";
+                    return new NextAction(
+                        NextActionKind.Dss,
+                        dssBody.Name,
+                        reason,
+                        DssReason(dssBody),
+                        TargetSystem: current.Name,
+                        TargetBody: dssBody.Name);
                 }
             }
         }
@@ -767,8 +805,18 @@ public sealed class AtlasService
         if (hop is not null)
         {
             return hop.Kind == CrawlHopKind.BackTrack
-                ? new CrawlStep("Back-track", hop.SystemName, hop.Reason)
-                : new CrawlStep("Jump", hop.SystemName, hop.Reason);
+                ? new NextAction(
+                    NextActionKind.BackTrack,
+                    hop.SystemName,
+                    hop.Reason,
+                    TargetSystem: hop.SystemName,
+                    DistanceLy: hop.DistanceLy)
+                : new NextAction(
+                    NextActionKind.Jump,
+                    hop.SystemName,
+                    hop.Reason,
+                    TargetSystem: hop.SystemName,
+                    DistanceLy: hop.DistanceLy);
         }
 
         return null;
@@ -779,31 +827,32 @@ public sealed class AtlasService
         ICelestialBodyRepository bodyRepository,
         CancellationToken cancellationToken)
     {
-        // 1. Any intel-flagged body in the system (8th moon / notable class) wins, even if it
-        //    isn't a normal DSS candidate yet — these are what the hunt wants checked.
         var bodies = await bodyRepository.FindBySystemIdAsync(systemId, cancellationToken);
-        if (bodies.Count > 0)
+        if (bodies.Count == 0)
         {
-            var intelBody = bodies
-                .Where(b => b.ScanStatus != ScanStatus.Mapped)
-                .Where(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null
-                            || RaxxlaSearchIntel.ReasonForBodyClass(b.PlanetClass) is not null)
-                .OrderByDescending(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null) // 8th-moon > class
-                .ThenBy(BodyCreditOrder)
-                .FirstOrDefault();
-
-            if (intelBody is not null)
-            {
-                return intelBody;
-            }
+            return null;
         }
 
-        // 2. Fall back to the normal "worth a DSS" candidate for the system.
-        var dss = await bodyRepository.ListDssCandidatesAsync(500, cancellationToken);
-        return dss.FirstOrDefault(d => d.SystemId == systemId);
+        var intelBody = bodies
+            .Where(b => b.ScanStatus != ScanStatus.Mapped)
+            .Where(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null
+                        || RaxxlaSearchIntel.ReasonForBodyClass(b.PlanetClass) is not null)
+            .OrderByDescending(b => RaxxlaSearchIntel.ReasonForEighthMoon(b.Name) is not null)
+            .ThenBy(BodyCreditOrder)
+            .FirstOrDefault();
+
+        if (intelBody is not null)
+        {
+            return intelBody;
+        }
+
+        return bodies
+            .Where(b => b.WorthDss && b.ScanStatus != ScanStatus.Mapped)
+            .OrderBy(BodyCreditOrder)
+            .FirstOrDefault();
     }
 
-    private static int IntelPriority(StarSystem system)
+    private static int RaxxlaPriority(StarSystem system)
     {
         var score = 0;
         if (RaxxlaSearchIntel.ReasonForLoreName(system.Name) is not null)

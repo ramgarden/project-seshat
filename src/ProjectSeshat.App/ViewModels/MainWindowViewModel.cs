@@ -4,6 +4,7 @@ using ProjectSeshat.App.Elite;
 using ProjectSeshat.Atlas;
 using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
+using ProjectSeshat.Core.Domain;
 using ProjectSeshat.Investigations;
 using ProjectSeshat.Journals;
 using ProjectSeshat.ThreadEngine;
@@ -74,7 +75,7 @@ public sealed class MainWindowViewModel : ViewModelBase
 
         _voicePinger = voicePinger ?? new SilentVoicePinger();
         Guidance = new GuidanceOverlayViewModel();
-        SearchGuide.CrawlUpdated += OnCrawlUpdated;
+        SearchGuide.NextActionUpdated += OnCrawlUpdated;
         // The SearchGuide already refreshed during construction (before this subscription), so
         // re-raise so the overlay + auto-target get the very first step without waiting for an import.
         SearchGuide.Refresh();
@@ -235,18 +236,18 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// <summary>Starts live journal watching so the guide and stats update as the game writes new events.</summary>
     public void StartJournalWatcher() => _journalWatcher?.Start();
 
-    private void OnCrawlUpdated(ProjectSeshat.Atlas.CrawlStep? step)
+    private void OnCrawlUpdated(NextAction? action)
     {
-        Guidance.SetStep(step);
-        if (step is not null && OverlayVisible)
+        Guidance.SetStep(action);
+        if (action is not null && OverlayVisible)
         {
             _voicePinger?.Speak(Guidance.Transcript ?? "");
         }
 
         // When auto-targeting is enabled, drive the game with the commander's real keys.
-        if (step is not null && _autoTargetEnabled)
+        if (action is not null && _autoTargetEnabled)
         {
-            _keyAutomation?.AutoTargetNextStar(step);
+            _keyAutomation?.AutoTargetNextStar(action);
         }
     }
 
@@ -286,12 +287,12 @@ public sealed class MainWindowViewModel : ViewModelBase
     /// </summary>
     private void TestGuidance()
     {
-        var step = new ProjectSeshat.Atlas.CrawlStep(
-            "Jump",
+        var action = new NextAction(
+            NextActionKind.Jump,
             "Sol",
             "Nearest unsearched star within reach",
-            "90 Ly away");
-        OnCrawlUpdated(step);
+            DistanceLy: 90);
+        OnCrawlUpdated(action);
         OverlayVisible = true;
         _voicePinger?.Speak(Guidance.Transcript ?? "");
     }

@@ -311,6 +311,47 @@ public sealed class JournalReaderTests
     }
 
     [Fact]
+    public async Task ImportAsync_UpdatesCurrentSystemWithoutEntityTrackingConflict()
+    {
+        await using var connection = new SqliteConnection("Data Source=:memory:");
+        await connection.OpenAsync();
+
+        await using var context = CreateContext(connection);
+        var starSystemRepository = new StarSystemRepository(context);
+        var commanderRepository = new CommanderRepository(context);
+        var evidenceRepository = new EvidenceRepository(context);
+        var navigationRepository = new NavigationStateRepository(context);
+        var reader = new JournalReader();
+
+        using var firstJournal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:01Z","event":"FSDJump","StarSystem":"LHS 3447","StarPos":[-23.4,-72.4,-35.3]}
+""");
+        await reader.ImportAsync(
+            firstJournal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            navigationRepository: navigationRepository);
+
+        using var secondJournal = new StringReader("""
+{"timestamp":"2024-01-01T00:00:02Z","event":"FSDJump","StarSystem":"Sol","StarPos":[0.0,0.0,0.0]}
+""");
+        await reader.ImportAsync(
+            secondJournal,
+            starSystemRepository,
+            commanderRepository,
+            evidenceRepository,
+            navigationRepository: navigationRepository);
+
+        var state = await navigationRepository.GetAsync();
+        Assert.NotNull(state);
+        Assert.NotNull(state!.CurrentSystemId);
+
+        var current = await starSystemRepository.FindByIdAsync(state.CurrentSystemId.Value);
+        Assert.Equal("Sol", current!.Name);
+    }
+
+    [Fact]
     public async Task ImportAsync_CapturesSignalTypesFromFssSignalsFound()
     {
         await using var connection = new SqliteConnection("Data Source=:memory:");

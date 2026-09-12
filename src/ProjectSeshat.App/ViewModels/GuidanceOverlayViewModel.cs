@@ -1,4 +1,5 @@
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 
 namespace ProjectSeshat.App.ViewModels;
 
@@ -29,12 +30,12 @@ public sealed class GuidanceOverlayViewModel : ViewModelBase
     /// <summary>Raised when the on-screen copy changes; the overlay window binds to it.</summary>
     public event Action<GuidanceStep>? Updated;
 
-    public void SetStep(CrawlStep? step)
+    public void SetStep(NextAction? action)
     {
         var next = new GuidanceStep(
-            GuidanceFormatter.OverlayTitle(step),
-            GuidanceFormatter.OverlayDetail(step),
-            GuidanceFormatter.Transcript(step));
+            GuidanceFormatter.OverlayTitle(action),
+            GuidanceFormatter.OverlayDetail(action),
+            GuidanceFormatter.Transcript(action));
 
         _titleText = next.Title;
         _detailText = next.Detail;

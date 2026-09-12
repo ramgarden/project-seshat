@@ -4,6 +4,7 @@ using Avalonia;
 using Avalonia.Controls;
 using ProjectSeshat.App.ViewModels;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 
 namespace ProjectSeshat.App.Views;
 
@@ -61,7 +62,7 @@ public sealed class GuidanceOverlayWindow : Window
         Closed += OnClosed;
     }
 
-    public void Update(CrawlStep? step) => _viewModel.SetStep(step);
+    public void Update(NextAction? action) => _viewModel.SetStep(action);
 
     private void OnOpened(object? sender, EventArgs e)
     {

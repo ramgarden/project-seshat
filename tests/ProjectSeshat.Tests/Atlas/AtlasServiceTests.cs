@@ -109,8 +109,8 @@ public sealed class AtlasServiceTests
         Assert.Equal(2, crawl.Route.Count);
         Assert.Equal("NEAR", crawl.Route[0].SystemName);
         Assert.Equal("FAR", crawl.Route[1].SystemName);
-        Assert.Equal("Jump", crawl.NextStep?.Action);
-        Assert.Equal("NEAR", crawl.NextStep?.Target);
+        Assert.Equal(NextActionKind.Jump, crawl.NextAction?.Action);
+        Assert.Equal("NEAR", crawl.NextAction?.Target);
         Assert.Equal("HERE", crawl.CurrentSystemName);
         Assert.NotNull(crawl.RecommendedGate);
     }
@@ -129,8 +129,8 @@ public sealed class AtlasServiceTests
         var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
 
         // Nothing left to FSS/DSS here → the guide should tell us to jump on.
-        Assert.Equal("Jump", crawl.NextStep?.Action);
-        Assert.Equal("NEXT", crawl.NextStep?.Target);
+        Assert.Equal(NextActionKind.Jump, crawl.NextAction?.Action);
+        Assert.Equal("NEXT", crawl.NextAction?.Target);
     }
 
     [Fact]
@@ -146,8 +146,8 @@ public sealed class AtlasServiceTests
         var atlas = new AtlasService();
         var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
 
-        Assert.Equal("Honk", crawl.NextStep?.Action);
-        Assert.Equal("HERE", crawl.NextStep?.Target);
+        Assert.Equal(NextActionKind.Honk, crawl.NextAction?.Action);
+        Assert.Equal("HERE", crawl.NextAction?.Target);
     }
 
     [Fact]
@@ -163,9 +163,9 @@ public sealed class AtlasServiceTests
         var atlas = new AtlasService();
         var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
 
-        Assert.Equal("FSS", crawl.NextStep?.Action);
-        Assert.Equal("HERE", crawl.NextStep?.Target);
-        Assert.Equal("Biological", crawl.NextStep?.Detail);
+        Assert.Equal(NextActionKind.Fss, crawl.NextAction?.Action);
+        Assert.Equal("HERE", crawl.NextAction?.Target);
+        Assert.Equal("Biological", crawl.NextAction?.Detail);
     }
 
     [Fact]
@@ -192,8 +192,49 @@ public sealed class AtlasServiceTests
         var atlas = new AtlasService();
         var crawl = await atlas.BuildOutwardCrawlAsync(systems, bodyRepository: bodies, navigationRepository: nav);
 
-        Assert.Equal("DSS", crawl.NextStep?.Action);
-        Assert.Equal("HERE 1", crawl.NextStep?.Target);
+        Assert.Equal(NextActionKind.Dss, crawl.NextAction?.Action);
+        Assert.Equal("HERE 1", crawl.NextAction?.Target);
+    }
+
+    [Fact]
+    public async Task OutwardCrawl_PrefersUnmappedEighthMoonOverMappedNotableBody()
+    {
+        var systems = new InMemorySystemRepository();
+        var here = new StarSystem(new StarSystemId(1), "HERE", new GalacticCoordinates(0, 0, 0), SystemSurveyState.FssScanned);
+        systems.Add(here);
+        var bodies = new InMemoryBodyRepository();
+        bodies.Add(new CelestialBody(
+            new CelestialBodyId(Guid.NewGuid()),
+            here.Id,
+            "HERE 2",
+            BodyKind.Planet,
+            null,
+            "Earthlike body",
+            null,
+            500,
+            ScanStatus.Mapped,
+            WorthDss: true));
+        bodies.Add(new CelestialBody(
+            new CelestialBodyId(Guid.NewGuid()),
+            here.Id,
+            "HERE 8 A",
+            BodyKind.Moon,
+            null,
+            null,
+            null,
+            600,
+            ScanStatus.FssScanned,
+            WorthDss: true));
+        var nav = new InMemoryNavigationStateRepository(
+            new NavigationState(new NavigationStateId(Guid.NewGuid()), here.Id, DateTimeOffset.UtcNow));
+
+        var atlas = new AtlasService();
+        var crawl = await atlas.BuildOutwardCrawlAsync(systems, bodyRepository: bodies, navigationRepository: nav);
+
+        Assert.Equal(NextActionKind.Dss, crawl.NextAction?.Action);
+        Assert.Equal("HERE 8 A", crawl.NextAction?.Target);
+        Assert.Equal("HERE", crawl.NextAction?.TargetSystemName);
+        Assert.Equal("HERE 8 A", crawl.NextAction?.TargetBodyName);
     }
 
     [Fact]
@@ -215,8 +256,8 @@ public sealed class AtlasServiceTests
         Assert.NotEmpty(crawl.Route);
         Assert.Equal(CrawlHopKind.BackTrack, crawl.Route[0].Kind);
         Assert.Equal("ONWAY", crawl.Route[0].SystemName);
-        Assert.Equal("Back-track", crawl.NextStep?.Action);
-        Assert.Equal("ONWAY", crawl.NextStep?.Target);
+        Assert.Equal(NextActionKind.BackTrack, crawl.NextAction?.Action);
+        Assert.Equal("ONWAY", crawl.NextAction?.Target);
     }
 
     [Fact]
@@ -235,7 +276,7 @@ public sealed class AtlasServiceTests
 
         Assert.Equal(CrawlHopKind.Jump, crawl.Route[0].Kind);
         Assert.Equal("FRONTIER", crawl.Route[0].SystemName);
-        Assert.Equal("Jump", crawl.NextStep?.Action);
+        Assert.Equal(NextActionKind.Jump, crawl.NextAction?.Action);
     }
 
     [Fact]
@@ -252,7 +293,7 @@ public sealed class AtlasServiceTests
         var crawl = await atlas.BuildOutwardCrawlAsync(systems, navigationRepository: nav);
 
         Assert.Empty(crawl.Route);
-        Assert.Null(crawl.NextStep);
+        Assert.Null(crawl.NextAction);
     }
 
     [Fact]

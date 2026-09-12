@@ -1,5 +1,6 @@
 using ProjectSeshat.App.Elite;
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 using Xunit;
 
 namespace ProjectSeshat.Tests.App;
@@ -151,7 +152,7 @@ public sealed class KeyAutomationServiceTests
             var service = NewService(input, bindsDir, BindsXml);
             service.TryEnable();
 
-            service.AutoTargetNextStar(new CrawlStep("Jump", "Sol", "Nearest unsearched star"));
+            service.AutoTargetNextStar(new NextAction(NextActionKind.Jump, "Sol", "Nearest unsearched star"));
 
             Assert.Contains("Key_T", input.Pressed);
             Assert.Contains("Key_J", input.Pressed);
@@ -172,7 +173,7 @@ public sealed class KeyAutomationServiceTests
             var service = NewService(input, bindsDir, null);
             service.TryEnable();
 
-            service.AutoTargetNextStar(new CrawlStep("Jump", "Sol", "reason"));
+            service.AutoTargetNextStar(new NextAction(NextActionKind.Jump, "Sol", "reason"));
 
             Assert.Empty(input.Pressed);
         }
@@ -192,7 +193,7 @@ public sealed class KeyAutomationServiceTests
             var service = NewService(input, bindsDir, BindsXml);
             service.TryEnable();
 
-            service.AutoTargetNextStar(new CrawlStep("FSS", "Sol", "resolve signals"));
+            service.AutoTargetNextStar(new NextAction(NextActionKind.Fss, "Sol", "resolve signals"));
 
             Assert.Contains("Key_T", input.Pressed);
             Assert.DoesNotContain("Key_J", input.Pressed);
@@ -213,7 +214,7 @@ public sealed class KeyAutomationServiceTests
             var service = NewService(input, bindsDir, BindsXml);
             service.TryEnable();
 
-            service.AutoTargetNextStar(new CrawlStep("DSS", "Sol 1", "Terraformable world"));
+            service.AutoTargetNextStar(new NextAction(NextActionKind.Dss, "Sol 1", "Terraformable world"));
 
             Assert.Contains("Key_T", input.Pressed);
             Assert.DoesNotContain("Key_J", input.Pressed);
@@ -234,7 +235,7 @@ public sealed class KeyAutomationServiceTests
             var service = NewService(input, bindsDir, BindsXml);
             service.TryEnable();
 
-            service.AutoTargetNextStar(new CrawlStep("Jump", "Sol", "reason"));
+            service.AutoTargetNextStar(new NextAction(NextActionKind.Jump, "Sol", "reason"));
 
             Assert.Empty(input.Pressed);
         }

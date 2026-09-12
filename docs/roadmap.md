@@ -42,7 +42,7 @@
 - [x] Review a thread's captured evidence in the desktop UI.
 
 ## Milestone 1.0 — .NET 10 Migration
-- [ ] Migrate solution to .NET 10.
+- [x] Migrate solution to .NET 10.
 
 ## Milestone 1.1 — Atlas undiscovered-region survey
 
@@ -148,6 +148,15 @@ Goal: apply the community's actual hunt criteria (Great Raxxla Potato Hunt playb
 - [x] Search Guide adds a **RAXXLA INTEL** panel (tagged MAP/FSS/LORE/BUBBLE entries) refreshed on journal import.
 - [x] Research captured in `docs/raxxla-search-criteria.md` with sources cited; the app's intel is presented as priorities-to-investigate, not claimed locations.
 - [x] The **overlay auto-updates the next thing to do** on launch and every journal import, and is **intel-aware**: suspicious FSS signals / intel-flagged bodies drive the next step's wording, and the outward jump plot prefers intel-flagged systems (lore names, suspicious signals, Sol-bubble systems) over nearest-first.
+
+## Milestone 1.14 — Guided search action model and Raxxla intel
+
+- [x] Introduce the canonical `NextActionKind` / `NextAction` model and replace legacy `CrawlStep` flow with the shared action model.
+- [x] Prioritize immediate actions in the order HONK → FSS → DSS → JUMP/BACK-TRACK, with DSS preferring unmapped eighth-moon or notable bodies.
+- [x] Add a prominent `NEXT RAXXLA MOVE` card and ranked `RAXXLA INTEL` panel to the Search Guide page.
+- [x] Make Search Guide refresh asynchronous and cancellation-safe, with `NextActionUpdated` notifications for overlay, voice, and automation consumers.
+- [x] Fix navigation-state persistence so repeated journal imports update the existing row without EF tracking/SQLite uniqueness conflicts.
+- [x] Add focused tests for planner priority, Raxxla selection, guidance formatting, automation, async refresh, and navigation-state updates.
 
 ## Next
 

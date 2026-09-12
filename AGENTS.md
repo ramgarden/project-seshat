@@ -8,7 +8,7 @@
 
 ## Commands
 
-Use the .NET 9 SDK from the repository root:
+Use the .NET 10 SDK from the repository root:
 
 ```powershell
 dotnet restore
@@ -62,3 +62,30 @@ Package versions are managed centrally in `Directory.Packages.props`; never add 
 - `PathIcon` does not inherit `Foreground`; set it explicitly for every icon state.
 - Keep user-facing labels in view models and application logic out of code-behind.
 - After UI edits, run `dotnet build` and inspect touched `.axaml` for low-contrast colors and labels without explicit foregrounds.
+
+## Current Handoff
+
+- Work is on branch `main` with Milestone 1.14 implemented and committed.
+- Canonical action model is `ProjectSeshat.Core.Domain.NextActionKind` and `NextAction`; `CrawlStep` remains a legacy compatibility model.
+- Priority is current HONK, then FSS, then DSS, then JUMP/BACK-TRACK. DSS should prefer unmapped eighth-moon/notable bodies.
+- Search Guide now has async refresh, `CurrentAction`, `NextActionTitle`, `NextActionReason`, `NextActionDetail`, `HasNextAction`, `NextActionUpdated`, and `CrawlUpdated`.
+- `GuidanceFormatter` and `GuidanceOverlayViewModel` use `NextAction`; `GuidanceOverlayWindow` and `KeyAutomationService` retain compatibility with `CrawlStep`.
+- `MainWindowViewModel` subscribes to `NextActionUpdated` and converts the action to a legacy `CrawlStep` for overlay, voice, and automation.
+- `SearchGuideView.axaml` includes the prominent `NEXT RAXXLA MOVE` card.
+- `NavigationStateRepository.SaveAsync` updates existing rows in place to avoid EF tracking and SQLite uniqueness conflicts during repeated journal imports.
+- `docs/ai-handoff.md` and `docs/roadmap.md` document the completed milestone and current build/test state.
+
+### Current Build State
+
+- The project targets .NET 10.
+- `dotnet build ProjectSeshat.sln --no-restore` succeeds.
+- `dotnet test ProjectSeshat.sln --no-build --no-restore` passes all 142 tests.
+- Existing dependency warnings include `NU1902`, `NU1903`, and `NU1904` (SQLitePCLRaw, System.Drawing.Common, System.Security.Cryptography.Xml, and Tmds.DBus.Protocol).
+- `src/ProjectSeshat.Atlas\AtlasService.cs` has an LF/CRLF line-ending warning.
+
+### Handoff Checklist
+
+1. Preserve unrelated uncommitted work when continuing.
+2. Keep journal import and navigation-state updates covered by tests.
+3. Validate live journal watching and dashboard counts on-device before relying on the watcher end to end.
+4. Run build and test before further milestone changes.

@@ -4,7 +4,7 @@ This document is the operational starting point for an AI coding agent continuin
 
 ## Purpose and current state
 
-Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 9 desktop application using Avalonia and MVVM, backed by an EF Core + SQLite database.
+Project Seshat is an open-source Galactic Research Platform for *Elite Dangerous*. It is a .NET 10 desktop application using Avalonia and MVVM, backed by an EF Core + SQLite database.
 
 Milestones 0.2–0.9 built up the production features: a visible dashboard, the shared Core domain model, SQLite/EF Core persistence, journal ingestion, sidebar navigation, atlas/codex/observation data, research-thread workflows, and evidence capture/investigations. Milestone 1.0 added the Atlas undiscovered-region survey (galactic coordinates + region ranking), and Milestone 1.1 delivered **guided search**.
 
@@ -63,7 +63,7 @@ To keep the app smooth while playing, the EDDN `Changed` notification is **coale
 A file logger (`SeshatLog`, `src/ProjectSeshat.App/SeshatLog.cs`) writes timestamped lines plus every unhandled/unobserved exception to `%APPDATA%\ProjectSeshat\logs\seshat.log`; it installs AppDomain + TaskScheduler crash handlers on startup. The EDDN toggle button uses the standard action-button palette with explicit `/template/ ContentPresenter` hover/pressed overrides so the Fluent theme's default layer can't wash it out.
 
 
-The tests exercise the parser, the listener flow, and Spansh parsing with injected fakes, so the unit-test suite runs offline. Live-stream connectivity and persisting EDDN discoveries into the survey/systems store are the planned follow-ups (network-only, not exercisable in this sandbox).
+The tests exercise the parser, the listener flow, and Spansh parsing with injected fakes, so the unit-test suite runs offline. Live-stream connectivity and persisting EDDN discoveries into the survey/systems store are the planned follow-ups (network-only, not exercisable in this sandbox). Current suite: 142 tests passing under .NET 10.
 
 ### Galactic sky-map
 
@@ -71,7 +71,7 @@ The tests exercise the parser, the listener flow, and Spansh parsing with inject
 
 ## Quick start
 
-Run all commands from the repository root with the .NET 9 SDK installed:
+Run all commands from the repository root with the .NET 10 SDK installed:
 
 ```powershell
 dotnet build ProjectSeshat.sln
@@ -240,17 +240,25 @@ A design-time factory (`ProjectSeshatDbContextFactory`) lets the EF tools build 
 
 ## Tests
 
-Tests are in `tests/ProjectSeshat.Tests` and currently pass (137 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, the Atlas search guide + crawl tiers, Raxxla intel scoring, overlay/voice/auto-targeting logic, and the guidance overlay position store. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
+Tests are in `tests/ProjectSeshat.Tests` and currently pass (142 tests). They cover architecture constraints, domain records, SQLite repository round trips (in-memory SQLite), journal reader import/dedup, the Atlas search guide + crawl tiers, Raxxla intel scoring, overlay/voice/auto-targeting logic, and the guidance overlay position store. Prefer in-memory SQLite over EF Core's non-relational in-memory provider because it exercises SQLite behavior.
 
 ## Dependencies and project conventions
 
-- Target framework: `net9.0`
+- Target framework: `net10.0`
 - Nullable reference types and implicit usings: enabled in `Directory.Build.props`
 - Package versions: managed centrally in `Directory.Packages.props`
 - UI: Avalonia `11.2.3`; Data: EF Core / SQLite `9.0.8` (includes `Microsoft.EntityFrameworkCore.Design` for migrations)
 - Testing: xUnit
 
 Do not add a package version directly to a `.csproj`; add it to `Directory.Packages.props` and reference the package without a version in the consuming project.
+
+## Milestone 1.14 — Guided search action model and Raxxla intel
+- Canonical `NextActionKind` / `NextAction` model is now used for the immediate action flow; legacy `CrawlStep` is retained only for compatibility.
+- Search Guide refresh is asynchronous and cancellation-safe; `NextActionUpdated` notifies overlay, voice, and automation consumers.
+- Priority is HONK → FSS → DSS → JUMP/BACK-TRACK, with DSS preferring unmapped eighth-moon/notable bodies.
+- Search Guide includes a prominent `NEXT RAXXLA MOVE` card and ranked `RAXXLA INTEL` panel.
+- `NavigationStateRepository.SaveAsync` now updates existing EF rows instead of attaching duplicate entities, fixing repeated journal imports.
+- Current suite passes 142 tests under .NET 10.
 
 ## Recommended next work
 

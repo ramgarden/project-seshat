@@ -27,8 +27,10 @@ public sealed class SearchGuideViewModel : ViewModelBase
     private string _recommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
     private string _nearestRecommendedGate = "No gate found";
     private string _nearestRecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
-    private CrawlStep? _currentStep;
+    private NextAction? _currentAction;
     private StarSystemId? _selectedGateId;
+    private CancellationTokenSource? _refreshCancellation;
+    private int _refreshVersion;
 
     public SearchGuideViewModel(
         AtlasService? atlas = null,
@@ -41,12 +43,15 @@ public sealed class SearchGuideViewModel : ViewModelBase
         _bodyRepository = bodyRepository;
         _navigationRepository = navigationRepository;
 
-        SelectRecommendedGateCommand = new RelayCommand(SelectRecommendedGate);
-        SelectNearestGateCommand = new RelayCommand(SelectNearestGate);
-        ClearGateCommand = new RelayCommand(ClearGate);
+        SelectRecommendedGateCommand = new RelayCommand(async () => { await SelectRecommendedGate(); });
+        SelectNearestGateCommand = new RelayCommand(async () => { await SelectNearestGate(); });
+        ClearGateCommand = new RelayCommand(async () => { await ClearGate(); });
 
         Refresh();
     }
+
+    public void Refresh()
+        => _ = RefreshAsync();
 
     public ObservableCollection<GuideTarget> HonkItems { get; } = new();
 
@@ -62,6 +67,35 @@ public sealed class SearchGuideViewModel : ViewModelBase
         get => _raxxlaIntelStatus;
         private set => SetProperty(ref _raxxlaIntelStatus, value);
     }
+
+    public string RaxxlaMoveTitle
+    {
+        get => _raxxlaMoveTitle;
+        private set => SetProperty(ref _raxxlaMoveTitle, value);
+    }
+
+    public string RaxxlaMoveSubtitle
+    {
+        get => _raxxlaMoveSubtitle;
+        private set => SetProperty(ref _raxxlaMoveSubtitle, value);
+    }
+
+    public string RaxxlaMoveDetail
+    {
+        get => _raxxlaMoveDetail;
+        private set => SetProperty(ref _raxxlaMoveDetail, value);
+    }
+
+    public bool HasRaxxlaMove
+    {
+        get => _hasRaxxlaMove;
+        private set => SetProperty(ref _hasRaxxlaMove, value);
+    }
+
+    private string _raxxlaMoveTitle = "No Raxxla move yet";
+    private string _raxxlaMoveSubtitle = "Import journals to flag community-derived search priorities.";
+    private string _raxxlaMoveDetail = "Raxxla hints are investigation priorities, not claimed locations.";
+    private bool _hasRaxxlaMove;
 
     public string CurrentPositionText { get; private set; } = "Current position unknown";
 
@@ -164,24 +198,51 @@ public sealed class SearchGuideViewModel : ViewModelBase
 
     public ICommand ClearGateCommand { get; }
 
-    /// <summary>Raised whenever the outward-crawl step changes so overlays/voice can follow.</summary>
+    /// <summary>Raised whenever the canonical next action changes so overlays/voice can follow.</summary>
+    public event Action<NextAction?>? NextActionUpdated;
+
+    /// <summary>Compatibility event for callers still using the legacy crawl-step model.</summary>
     public event Action<CrawlStep?>? CrawlUpdated;
 
-    /// <summary>The current ranked crawl step (Honk/FSS/DSS/Jump/Back-track), or null when done.</summary>
-    public CrawlStep? CurrentStep => _currentStep;
+    /// <summary>The canonical next action, or null when there is no immediate instruction.</summary>
+    public NextAction? CurrentAction => _currentAction;
 
-    private void SelectRecommendedGate()
+    public string NextActionTitle
+    {
+        get => GuidanceFormatter.OverlayTitle(_currentAction);
+        private set => SetProperty(ref _nextActionTitle, value);
+    }
+
+    public string NextActionReason
+    {
+        get => _currentAction?.Reason ?? "No immediate action is available.";
+        private set => SetProperty(ref _nextActionReason, value);
+    }
+
+    public string NextActionDetail
+    {
+        get => GuidanceFormatter.OverlayDetail(_currentAction);
+        private set => SetProperty(ref _nextActionDetail, value);
+    }
+
+    public bool HasNextAction => _currentAction is not null;
+
+    private string _nextActionTitle = "NO NEXT MOVE";
+    private string _nextActionReason = "No immediate action is available.";
+    private string _nextActionDetail = "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
+
+    private async Task SelectRecommendedGate()
     {
         if (_atlas is null || _systemRepository is null || string.IsNullOrEmpty(RecommendedGate))
         {
             return;
         }
 
-        var gate = _systemRepository.FindByNameAsync(RecommendedGate).GetAwaiter().GetResult();
-        SelectGate(gate);
+        var gate = await _systemRepository.FindByNameAsync(RecommendedGate, CancellationToken.None);
+        await SelectGate(gate);
     }
 
-    private void SelectNearestGate()
+    private async Task SelectNearestGate()
     {
         if (_atlas is null || _systemRepository is null || string.IsNullOrEmpty(NearestRecommendedGate)
             || string.Equals(NearestRecommendedGate, RecommendedGate, StringComparison.OrdinalIgnoreCase))
@@ -189,11 +250,11 @@ public sealed class SearchGuideViewModel : ViewModelBase
             return;
         }
 
-        var gate = _systemRepository.FindByNameAsync(NearestRecommendedGate).GetAwaiter().GetResult();
-        SelectGate(gate);
+        var gate = await _systemRepository.FindByNameAsync(NearestRecommendedGate, CancellationToken.None);
+        await SelectGate(gate);
     }
 
-    private void SelectGate(StarSystem? gate)
+    private async Task SelectGate(StarSystem? gate)
     {
         if (gate is null)
         {
@@ -204,14 +265,14 @@ public sealed class SearchGuideViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasSelectedGate));
         OnPropertyChanged(nameof(GateActionText));
         OnPropertyChanged(nameof(SearchOriginText));
-        Refresh();
+        await RefreshAsync();
     }
 
-    private void ClearGate()
+    private async Task ClearGate()
     {
         if (_selectedGateId is null)
         {
-            SelectRecommendedGate();
+            await SelectRecommendedGate();
             return;
         }
 
@@ -219,131 +280,246 @@ public sealed class SearchGuideViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasSelectedGate));
         OnPropertyChanged(nameof(GateActionText));
         OnPropertyChanged(nameof(SearchOriginText));
-        Refresh();
+        await RefreshAsync();
     }
 
-    public void Refresh()
+    public Task RefreshAsync(CancellationToken cancellationToken = default)
     {
-        HonkItems.Clear();
-        FssItems.Clear();
-        DssItems.Clear();
-
-        if (_atlas is null || _systemRepository is null || _bodyRepository is null)
+        if (_refreshCancellation is not null)
         {
-            SummaryText = "Search guide is unavailable in this context.";
-            return;
-        }
-
-        var guide = _atlas.BuildSearchGuideAsync(_systemRepository, _bodyRepository, _navigationRepository).GetAwaiter().GetResult();
-
-        var crawl = _atlas.BuildOutwardCrawlAsync(
-            _systemRepository,
-            navigationRepository: _navigationRepository,
-            bodyRepository: _bodyRepository,
-            gateSystemId: _selectedGateId).GetAwaiter().GetResult();
-
-        _currentStep = crawl.NextStep ?? (crawl.Route.Count > 0
-            ? new CrawlStep(
-                crawl.Route[0].Kind == CrawlHopKind.BackTrack ? "Back-track" : "Jump",
-                crawl.Route[0].SystemName,
-                crawl.Route[0].Reason)
-            : null);
-        CrawlUpdated?.Invoke(_currentStep);
-
-        if (crawl.NextStep is { } nextStep)
-        {
-            OutwardNext = $"{nextStep.Action} → {nextStep.Target}";
-            OutwardNextReason = nextStep.Reason + (string.IsNullOrWhiteSpace(nextStep.Detail) ? "" : $" ({nextStep.Detail})");
-        }
-        else
-        {
-            var hops = crawl.Route.FirstOrDefault();
-            if (hops is not null)
+            try
             {
-                OutwardNext = $"{hops.Kind} → {hops.SystemName}";
-                OutwardNextReason = hops.Reason;
+                _refreshCancellation.Cancel();
             }
-            else
+            catch (ObjectDisposedException)
+            {
+            }
+
+            _refreshCancellation.Dispose();
+        }
+        var refreshCancellation = new CancellationTokenSource();
+        _refreshCancellation = refreshCancellation;
+        CancellationTokenSource? linkedRefreshCancellation = null;
+        if (cancellationToken.CanBeCanceled)
+        {
+            linkedRefreshCancellation = CancellationTokenSource.CreateLinkedTokenSource(cancellationToken, refreshCancellation.Token);
+        }
+
+        var refreshToken = linkedRefreshCancellation?.Token ?? refreshCancellation.Token;
+        var refreshVersion = ++_refreshVersion;
+        return RefreshCoreAsync(refreshToken, refreshVersion, refreshCancellation, linkedRefreshCancellation);
+    }
+
+    private bool IsCurrentRefresh(int version, CancellationToken cancellationToken)
+        => !cancellationToken.IsCancellationRequested && version == _refreshVersion;
+
+    private async Task RefreshCoreAsync(
+        CancellationToken cancellationToken,
+        int refreshVersion,
+        CancellationTokenSource refreshCancellation,
+        CancellationTokenSource? linkedRefreshCancellation)
+    {
+        try
+        {
+            if (!IsCurrentRefresh(refreshVersion, cancellationToken))
+            {
+                return;
+            }
+
+            HonkItems.Clear();
+            FssItems.Clear();
+            DssItems.Clear();
+
+            if (_atlas is null || _systemRepository is null || _bodyRepository is null)
+            {
+                SummaryText = "Search guide is unavailable in this context.";
+                NextJumpTitle = "No next jump";
+                NextJumpDetail = "The search guide is unavailable in this context.";
+                NextActionTitle = GuidanceFormatter.OverlayTitle(null);
+                NextActionReason = "No immediate action is available.";
+                NextActionDetail = "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
+                _currentAction = null;
+                NextActionUpdated?.Invoke(null);
+                CrawlUpdated?.Invoke(null);
+                return;
+            }
+
+            var guide = await _atlas.BuildSearchGuideAsync(
+                _systemRepository,
+                _bodyRepository,
+                _navigationRepository,
+                cancellationToken);
+
+            if (!IsCurrentRefresh(refreshVersion, cancellationToken))
+            {
+                return;
+            }
+
+            var crawl = await _atlas.BuildOutwardCrawlAsync(
+                _systemRepository,
+                navigationRepository: _navigationRepository,
+                bodyRepository: _bodyRepository,
+                gateSystemId: _selectedGateId,
+                cancellationToken: cancellationToken);
+
+            if (!IsCurrentRefresh(refreshVersion, cancellationToken))
+            {
+                return;
+            }
+
+            var previousAction = _currentAction;
+            _currentAction = crawl.NextAction;
+
+            if (!EqualityComparer<NextAction?>.Default.Equals(previousAction, _currentAction))
+            {
+                NextActionUpdated?.Invoke(_currentAction);
+                CrawlUpdated?.Invoke(ToLegacyStep(_currentAction));
+            }
+
+            if (_currentAction is null)
             {
                 OutwardNext = "No search in progress";
                 OutwardNextReason = "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
             }
-        }
+            else
+            {
+                OutwardNext = NextActionTitle;
+                OutwardNextReason = string.IsNullOrWhiteSpace(NextActionDetail)
+                    ? NextActionReason
+                    : NextActionDetail;
+            }
 
-        var suggestions = _atlas.RecommendSearchGatesAsync(_systemRepository, _navigationRepository).GetAwaiter().GetResult();
-        if (suggestions.Best is { } gate)
+            var suggestions = await _atlas.RecommendSearchGatesAsync(
+                _systemRepository,
+                _navigationRepository,
+                cancellationToken: cancellationToken);
+
+            if (!IsCurrentRefresh(refreshVersion, cancellationToken))
+            {
+                return;
+            }
+
+            if (suggestions.Best is { } gate)
+            {
+                RecommendedGate = gate.SystemName;
+                RecommendedGateReasoning = gate.Reasoning;
+                OnPropertyChanged(nameof(HasRecommendedGate));
+            }
+            else
+            {
+                RecommendedGate = "No gate found";
+                RecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+                OnPropertyChanged(nameof(HasRecommendedGate));
+            }
+
+            if (suggestions.BestNearest is { } nearestGate)
+            {
+                NearestRecommendedGate = nearestGate.SystemName;
+                NearestRecommendedGateReasoning = nearestGate.Reasoning;
+                OnPropertyChanged(nameof(HasNearestRecommendedGate));
+            }
+            else
+            {
+                NearestRecommendedGate = "No gate found";
+                NearestRecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
+                OnPropertyChanged(nameof(HasNearestRecommendedGate));
+            }
+
+            OnPropertyChanged(nameof(SearchOriginText));
+
+            CurrentPositionText = guide.CurrentSystemName is not null
+                ? $"You are at {guide.CurrentSystemName}"
+                : "Current position unknown";
+
+            var step = 0;
+            foreach (var target in guide.NeedHonk)
+            {
+                HonkItems.Add(GuideTarget.Honk(target) with { Title = $"{++step}. {target.SystemName}" });
+            }
+
+            foreach (var target in guide.NeedFss)
+            {
+                FssItems.Add(GuideTarget.Fss(target));
+            }
+
+            foreach (var target in guide.NeedDss)
+            {
+                DssItems.Add(GuideTarget.Dss(target));
+            }
+
+            RaxxlaIntelItems.Clear();
+            var intel = await _atlas.FindRaxxlaIntelAsync(
+                _systemRepository,
+                _bodyRepository,
+                cancellationToken: cancellationToken);
+
+            if (!IsCurrentRefresh(refreshVersion, cancellationToken))
+            {
+                return;
+            }
+
+            foreach (var hit in intel)
+            {
+                RaxxlaIntelItems.Add(GuideTarget.Intel(hit));
+            }
+
+            UpdateRaxxlaMove();
+
+            RaxxlaIntelStatus = RaxxlaIntelItems.Count == 0
+                ? "No Raxxla-hunt points of interest flagged yet. Consume signals and map notable bodies to build this list."
+                : $"{RaxxlaIntelItems.Count} point{(RaxxlaIntelItems.Count == 1 ? "" : "s")} worth investigating \u2014 community-derived hints, not a claimed location.";
+
+            if (_currentAction is { } nextAction)
+            {
+                NextJumpTitle = nextAction.Action is NextActionKind.Jump or NextActionKind.BackTrack
+                    ? nextAction.Target
+                    : "No next jump";
+                var routeDetail = nextAction.Detail;
+                if (string.IsNullOrWhiteSpace(routeDetail) && nextAction.DistanceLy is { } distance)
+                {
+                    routeDetail = $"{distance:N0} Ly away";
+                }
+
+                NextJumpDetail = nextAction.Action is NextActionKind.Jump or NextActionKind.BackTrack
+                    ? $"{nextAction.Reason}{(string.IsNullOrWhiteSpace(routeDetail) ? "" : $" — {routeDetail}")}"
+                    : "Complete the current in-system action before opening the jump plot.";
+            }
+            else
+            {
+                NextJumpTitle = "No next jump";
+                NextJumpDetail = "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
+            }
+
+            SummaryText = _currentAction is null
+                ? "No immediate action is available."
+                : $"Next: {NextActionTitle} — {NextActionReason}";
+        }
+        catch (OperationCanceledException) when (cancellationToken.IsCancellationRequested)
         {
-            RecommendedGate = gate.SystemName;
-            RecommendedGateReasoning = gate.Reasoning;
-            OnPropertyChanged(nameof(HasRecommendedGate));
         }
-        else
+        finally
         {
-            RecommendedGate = "No gate found";
-            RecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
-            OnPropertyChanged(nameof(HasRecommendedGate));
+            linkedRefreshCancellation?.Dispose();
+            refreshCancellation.Dispose();
         }
+    }
 
-        if (suggestions.BestNearest is { } nearestGate)
-        {
-            NearestRecommendedGate = nearestGate.SystemName;
-            NearestRecommendedGateReasoning = nearestGate.Reasoning;
-            OnPropertyChanged(nameof(HasNearestRecommendedGate));
-        }
-        else
-        {
-            NearestRecommendedGate = "No gate found";
-            NearestRecommendedGateReasoning = "Import more journals first — a search gate needs some surveyed ground to recommend.";
-            OnPropertyChanged(nameof(HasNearestRecommendedGate));
-        }
+    private static CrawlStep? ToLegacyStep(NextAction? action)
+        => action is null
+            ? null
+            : new CrawlStep(
+                action.Action == NextActionKind.BackTrack ? "Back-track" : action.Action.ToString(),
+                action.Target,
+                action.Reason,
+                action.Detail);
 
-        OnPropertyChanged(nameof(SearchOriginText));
-
-        CurrentPositionText = guide.CurrentSystemName is not null
-            ? $"You are at {guide.CurrentSystemName}"
-            : "Current position unknown";
-
-        var step = 0;
-        foreach (var target in guide.NeedHonk)
-        {
-            HonkItems.Add(GuideTarget.Honk(target) with { Title = $"{++step}. {target.SystemName}" });
-        }
-
-        foreach (var target in guide.NeedFss)
-        {
-            FssItems.Add(GuideTarget.Fss(target));
-        }
-
-        foreach (var target in guide.NeedDss)
-        {
-            DssItems.Add(GuideTarget.Dss(target));
-        }
-
-        RaxxlaIntelItems.Clear();
-        var intel = _atlas.FindRaxxlaIntelAsync(_systemRepository, _bodyRepository).GetAwaiter().GetResult();
-        foreach (var hit in intel)
-        {
-            RaxxlaIntelItems.Add(GuideTarget.Intel(hit));
-        }
-
-        RaxxlaIntelStatus = RaxxlaIntelItems.Count == 0
-            ? "No Raxxla-hunt points of interest flagged yet. Consume signals and map notable bodies to build this list."
-            : $"{RaxxlaIntelItems.Count} point{(RaxxlaIntelItems.Count == 1 ? "" : "s")} worth investigating \u2014 community-derived hints, not a claimed location.";
-
-        if (guide.NeedHonk.Count > 0)
-        {
-            var first = guide.NeedHonk[0];
-            var distance = first.DistanceLy is null ? "position unknown" : $"{first.DistanceLy.Value:N0} LY away";
-            NextJumpTitle = first.SystemName;
-            NextJumpDetail = $"Next jump: discovery-scan {first.SystemName}. {distance} from your current position. After you reach it, the next-nearest unexplored system on the route follows.";
-        }
-        else
-        {
-            NextJumpTitle = "No next jump";
-            NextJumpDetail = "Every reachable system has already been discovery-scanned. When you import deeper jumps, a new route appears here.";
-        }
-
-        SummaryText = $"Next: {guide.HonkCount} system{(guide.HonkCount == 1 ? "" : "s")} to honk, then {guide.FssCount} to FSS, and {guide.DssCount} bod{(guide.DssCount == 1 ? "y" : "ies")} worth a DSS scan.";
+    private void UpdateRaxxlaMove()
+    {
+        var move = RaxxlaIntelItems.FirstOrDefault();
+        RaxxlaMoveTitle = move?.Title ?? "No Raxxla move yet";
+        RaxxlaMoveSubtitle = move?.Subtitle ?? "Import journals to flag community-derived search priorities.";
+        RaxxlaMoveDetail = move?.Detail ?? "Raxxla hints are investigation priorities, not claimed locations.";
+        HasRaxxlaMove = move is not null;
     }
 
     private sealed class RelayCommand(Action execute) : ICommand

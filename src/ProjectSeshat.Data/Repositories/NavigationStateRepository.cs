@@ -18,16 +18,18 @@ public sealed class NavigationStateRepository : INavigationStateRepository
 
     public async ValueTask SaveAsync(NavigationState state, CancellationToken cancellationToken = default)
     {
-        var existing = await _context.NavigationStates.AnyAsync(s => s.Id == state.Id, cancellationToken);
-        if (!existing)
+        var existing = await _context.NavigationStates.FindAsync(
+            new object?[] { state.Id },
+            cancellationToken);
+
+        if (existing is null)
         {
             _context.NavigationStates.Add(state);
-        }
-        else
-        {
-            _context.NavigationStates.Update(state);
+            await _context.SaveChangesAsync(cancellationToken);
+            return;
         }
 
+        _context.Entry(existing).CurrentValues.SetValues(state);
         await _context.SaveChangesAsync(cancellationToken);
     }
 }

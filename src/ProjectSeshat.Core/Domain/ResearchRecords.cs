@@ -9,6 +9,42 @@ public sealed record StarSystem(
     int NonBodySignals = 0,
     string? SignalTypes = null);
 
+/// <summary>Classifies the immediate action recommended by the guided search.</summary>
+public enum NextActionKind
+{
+    /// <summary>Discovery-scan the current system.</summary>
+    Honk,
+
+    /// <summary>Resolve non-body signals in the current system.</summary>
+    Fss,
+
+    /// <summary>Surface-map a specific body in the current system.</summary>
+    Dss,
+
+    /// <summary>Jump to the next unsearched system.</summary>
+    Jump,
+
+    /// <summary>Return through a charted system toward the next unsearched system.</summary>
+    BackTrack
+}
+
+/// <summary>A single, canonical instruction shared by the guide, overlay, voice, and automation.</summary>
+public sealed record NextAction(
+    NextActionKind Action,
+    string Target,
+    string Reason,
+    string? Detail = null,
+    string? TargetSystem = null,
+    string? TargetBody = null,
+    double? DistanceLy = null)
+{
+    /// <summary>The target system when the action is system-scoped.</summary>
+    public string? TargetSystemName => TargetSystem ?? (Action is NextActionKind.Dss ? null : Target);
+
+    /// <summary>The target body when the action is body-scoped.</summary>
+    public string? TargetBodyName => TargetBody;
+}
+
 /// <summary>Classifies how far a star system's survey has progressed.</summary>
 public enum SystemSurveyState
 {

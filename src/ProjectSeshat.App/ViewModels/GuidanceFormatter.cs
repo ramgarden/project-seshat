@@ -1,4 +1,5 @@
 using ProjectSeshat.Atlas;
+using ProjectSeshat.Core.Domain;
 
 namespace ProjectSeshat.App.ViewModels;
 
@@ -9,42 +10,42 @@ namespace ProjectSeshat.App.ViewModels;
 public static class GuidanceFormatter
 {
     /// <summary>The short one-line caption for the overlay.</summary>
-    public static string OverlayTitle(CrawlStep? step)
+    public static string OverlayTitle(NextAction? action)
     {
-        if (step is null)
+        if (action is null)
         {
             return "NO NEXT MOVE";
         }
 
-        return step.Action switch
+        return action.Action switch
         {
-            "Honk" => $"HONK {step.Target?.ToUpperInvariant()}",
-            "FSS" => "INSPECT THE TARGETED SIGNAL",
-            "DSS" => $"DSS TARGETED BODY",
-            "Back-track" => $"BACK-TRACK TO {step.Target?.ToUpperInvariant()}",
-            "Jump" => $"JUMP TO {step.Target?.ToUpperInvariant()}",
-            _ => $"{step.Action?.ToUpperInvariant()} → {step.Target?.ToUpperInvariant()}"
+            NextActionKind.Honk => $"HONK {action.Target?.ToUpperInvariant()}",
+            NextActionKind.Fss => "INSPECT THE TARGETED SIGNAL",
+            NextActionKind.Dss => $"DSS TARGETED BODY",
+            NextActionKind.BackTrack => $"BACK-TRACK TO {action.Target?.ToUpperInvariant()}",
+            NextActionKind.Jump => $"JUMP TO {action.Target?.ToUpperInvariant()}",
+            _ => $"{action.Action} → {action.Target?.ToUpperInvariant()}"
         };
     }
 
     /// <summary>
     /// The supporting line: names the target (body or system), then the reason/why it matters.
     /// </summary>
-    public static string OverlayDetail(CrawlStep? step)
+    public static string OverlayDetail(NextAction? action)
     {
-        if (step is null)
+        if (action is null)
         {
             return "Every known system is fully surveyed. Import deeper jumps to resume the outward crawl.";
         }
 
-        var targetLabel = step.Action switch
+        var targetLabel = action.Action switch
         {
-            "FSS" => $"signal in {step.Target}",
-            "DSS" => $"body {step.Target}",
-            _ => $"{step.Target}"
+            NextActionKind.Fss => $"signal in {action.Target}",
+            NextActionKind.Dss => $"body {action.Target}",
+            _ => $"{action.Target}"
         };
 
-        var reason = string.IsNullOrWhiteSpace(step.Detail) ? step.Reason ?? "" : $"{step.Reason} \u2014 {step.Detail}";
+        var reason = string.IsNullOrWhiteSpace(action.Detail) ? action.Reason ?? "" : $"{action.Reason} — {action.Detail}";
         return $"{targetLabel}. {reason}";
     }
 
@@ -52,30 +53,30 @@ public static class GuidanceFormatter
     /// A natural-language transcript for the voice pinger, e.g. "Jump to Sol, one hundred and two
     /// light years". Returns null when there is nothing worth saying.
     /// </summary>
-    public static string? Transcript(CrawlStep? step)
+    public static string? Transcript(NextAction? action)
     {
-        if (step is null)
+        if (action is null)
         {
             return null;
         }
 
-        return step.Action switch
+        return action.Action switch
         {
-            "Honk" => $"Arrived at {step.Target}. Run the discovery scan, then check for signals.",
-            "FSS" => $"Target the signal, then run the full spectrum scanner at {step.Target} to resolve it.{SignalSuffix(step)}",
-            "DSS" => $"Target the body {step.Target}, then map it with the detailed surface scanner.{DssSuffix(step)}",
-            "Back-track" => $"All nearby stars are searched. Back-track to {step.Target}.",
-            "Jump" => $"Nothing interesting here. Jump to {step.Target}.{DistanceSuffix(step)}",
-            _ => $"{step.Action} at {step.Target}."
+            NextActionKind.Honk => $"Arrived at {action.Target}. Run the discovery scan, then check for signals.",
+            NextActionKind.Fss => $"Target the signal, then run the full spectrum scanner at {action.Target} to resolve it.{SignalSuffix(action)}",
+            NextActionKind.Dss => $"Target the body {action.Target}, then map it with the detailed surface scanner.{DssSuffix(action)}",
+            NextActionKind.BackTrack => $"All nearby stars are searched. Back-track to {action.Target}.",
+            NextActionKind.Jump => $"Nothing interesting here. Jump to {action.Target}.{DistanceSuffix(action)}",
+            _ => $"{action.Action} at {action.Target}."
         };
     }
 
-    private static string SignalSuffix(CrawlStep step)
-        => string.IsNullOrWhiteSpace(step.Detail) ? "" : $" Signals detected: {step.Detail}.";
+    private static string SignalSuffix(NextAction action)
+        => string.IsNullOrWhiteSpace(action.Detail) ? "" : $" Signals detected: {action.Detail}.";
 
-    private static string DssSuffix(CrawlStep step)
-        => string.IsNullOrWhiteSpace(step.Detail) ? "" : $" Reason: {step.Detail}.";
+    private static string DssSuffix(NextAction action)
+        => string.IsNullOrWhiteSpace(action.Detail) ? "" : $" Reason: {action.Detail}.";
 
-    private static string DistanceSuffix(CrawlStep step)
-        => string.IsNullOrWhiteSpace(step.Detail) ? "" : $" {step.Detail}.";
+    private static string DistanceSuffix(NextAction action)
+        => string.IsNullOrWhiteSpace(action.Detail) ? "" : $" {action.Detail}.";
 }
