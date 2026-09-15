@@ -88,8 +88,8 @@ Before changing anything, run `git status --short`: work may be intentionally un
 | `ProjectSeshat.App` | Avalonia desktop UI, view models, and composition | Dashboard, Exploration, Research Threads, and Atlas Survey views in a left-sidebar navigation shell. |
 | `ProjectSeshat.Core` | Stable domain model and contracts | Systems, bodies, evidence, threads, observations, codex, survey state, and repository abstractions are implemented. |
 | `ProjectSeshat.Data` | Persistence boundary (SQLite/EF Core) | DbContext, repositories, and EF migrations implemented. Database lives in user AppData. |
-| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Imports commander identity, jumps (+ StarPos), scans, and the system honk; deduped by content fingerprint. `JournalWatcher` live-tails the journal directory. |
-| `ProjectSeshat.Atlas` | Spatial and astronomical research | Coordinates survey, region ranking, and the guided honk/FSS/DSS search guide (`AtlasService`). |
+| `ProjectSeshat.Journals` | Elite Dangerous journal ingestion | Imports commander identity, jumps (+ StarPos), scans, **beacon scans**, and the system honk; deduped by content fingerprint. `JournalWatcher` live-tails the journal directory. |
+| `ProjectSeshat.Atlas` | Spatial and astronomical research | Coordinates survey, region ranking, and the guided honk/FSS/DSS search guide (`AtlasService`); **beacon lore-name matching feeds Raxxla intel**. |
 | `ProjectSeshat.ThreadEngine` | Research-thread workflows | `ResearchThreadEngine` implemented. |
 | `ProjectSeshat.Codex` | Discovery and codex knowledge | Codex entries modeled and persisted. |
 | `ProjectSeshat.Observatory` | Observation analysis | Observations modeled and persisted. |
@@ -110,13 +110,13 @@ Before changing anything, run `git status --short`: work may be intentionally un
 
 The Core API is located under `src/ProjectSeshat.Core/Domain` and `src/ProjectSeshat.Core/Contracts`:
 
-- `Identifiers.cs` — `StarSystemId(long)`, `CommanderId`, `EvidenceId`, `CelestialBodyId`, `CodexEntryId`, `ObservationGuid`, `ResearchThreadId`.
-- `ResearchRecords.cs` — `StarSystem` (with `Position`, `SurveyState`, `NonBodySignals`), `Commander`, `JournalImportKey`, `EvidenceRecord`/`EvidenceKind`, plus Atlas records `GalacticCoordinates`, `BodyKind`, `ScanStatus`, `CelestialBody`, and codex/observatory records.
+- `Identifiers.cs` — `StarSystemId(long)`, `CommanderId`, `EvidenceId`, `CelestialBodyId`, `CodexEntryId`, `ObservationGuid`, `ResearchThreadId`, `BeaconScanId`.
+- `ResearchRecords.cs` — `StarSystem` (with `Position`, `SurveyState`, `NonBodySignals`), `Commander`, `JournalImportKey`, `EvidenceRecord`/`EvidenceKind`, plus Atlas records `GalacticCoordinates`, `BodyKind`, `ScanStatus`, `CelestialBody`, `BeaconScan`, and codex/observatory records.
 - `Threads.cs` — research thread records.
 - `NavigationState.cs` — the commander's current system (for jump-plotting).
 - `SurveyRegion.cs` — persisted frontier/uncharted regions keyed by grid cell (the source-of-truth survey).
 - `JournalImportTracker.cs` — import de-duplication by content fingerprint.
-- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`, `ISurveyRegionRepository`, `ICommunityDiscoveryRepository`.
+- `Contracts/` — `IStarSystemRepository`, `ICommanderRepository`, `IEvidenceRepository`, `ICelestialBodyRepository`, `IBeaconRepository`, `ICodexEntryRepository`, `IObservationRepository`, `IResearchThreadRepository`, `IJournalImportTrackerRepository`, `INavigationStateRepository`, `ISurveyRegionRepository`, `ICommunityDiscoveryRepository`.
 
 Repository contracts accept a `CancellationToken`; persistence implementations must follow these public contracts.
 
@@ -130,6 +130,7 @@ Repository contracts accept a `CancellationToken`; persistence implementations m
 - `BuildSearchGuideAsync` — builds the `SearchGuide` (`NeedHonk`, `NeedFss`, `NeedDss`) used by the Search Guide page (Milestone 1.1).
 - `BuildOutwardCrawlAsync` / `RecommendSearchGateAsync` / `RecommendSearchGatesAsync` — the **systematic outward survey** (Milestone 1.9): an outward crawl from a recommended gate, nearest-unsearched-first, auto-advancing the hop when a system has nothing left to FSS/DSS, and back-tracking through charted stars when the local neighbourhood is exhausted. Returns an `OutwardCrawl` (recommended `SearchGate` + score/reasoning, ordered `CrawlHop` route, and a single `CrawlStep` next move). The Search Guide page shows the gate, the best-nearest gate (`SearchGateSuggestions`), and the next move; both refresh on journal import. Gate scoring favours charted systems with dense unsearched neighbours, frontier proximity, reachability, and low community footprint.
 - `FindRaxxlaIntelAsync` — **community Raxxla search intel** (Milestone 1.13): scans known systems/bodies and returns ranked `RaxxlaIntelHit`s. Criteria come from `Core/Domain/RaxxlaSearchIntel.cs` (notable body classes, suspicious signal types, lore-name terms, the Sol 200-ly hunt bubble, and the 8th-moon Dark Wheel clue), distilled from **docs/raxxla-search-criteria.md** (Great Raxxla Potato Hunt playbook + lore wiki, sources cited). These are investigation *priorities*, not claimed locations. The Search Guide renders a "RAXXLA INTEL" panel from these.
+- **Beacon scanning** — parses `BeaconScan`/`BeaconFound` journal events into `BeaconScan` records (deduped by fingerprint). `RaxxlaSearchIntel.ReasonForBeacon` scans beacon name, owner, and type for lore terms; hits appear in the "RAXXLA INTEL" panel tagged "BEACON". The Dashboard shows a "BEACONS INDEXED" count.
 
 The **overlay auto-updates with the next thing to do** on every journal import (and on launch): `SearchGuide.Refresh()` → `CrawlUpdated` → `MainWindowViewModel.OnCrawlUpdated` → overlay + voice + auto-target. The next-step (`BuildNextStep`) is **intel-aware** — suspicious FSS signals and intel-flagged bodies (8th moons / notable classes) are surfaced in the step's reason, and the outward jump plot (`BuildCrawlRoute`) **prefers intel-flagged systems** (lore names, suspicious signals, Sol-bubble systems) over mere nearest, so the search bubble heads at interesting systems first.
 
@@ -258,6 +259,13 @@ Do not add a package version directly to a `.csproj`; add it to `Directory.Packa
 - Priority is HONK → FSS → DSS → JUMP/BACK-TRACK, with DSS preferring unmapped eighth-moon/notable bodies.
 - Search Guide includes a prominent `NEXT RAXXLA MOVE` card and ranked `RAXXLA INTEL` panel.
 - `NavigationStateRepository.SaveAsync` now updates existing EF rows instead of attaching duplicate entities, fixing repeated journal imports.
+- Current suite passes 142 tests under .NET 10.
+
+## Milestone 1.15 — Beacon scanning & Raxxla intel integration
+- `BeaconScan` domain record + `IBeaconRepository`/`BeaconRepository` for persisting Elite Dangerous beacon scans.
+- `JournalReader` parses `BeaconScan`/`BeaconFound` journal events (deduped by SHA-256 fingerprint).
+- Dashboard shows "BEACONS INDEXED" count.
+- `RaxxlaSearchIntel.ReasonForBeacon` scans beacon name, owner, and type for lore terms; hits appear in "RAXXLA INTEL" panel tagged "BEACON".
 - Current suite passes 142 tests under .NET 10.
 
 ## Recommended next work

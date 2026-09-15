@@ -27,7 +27,7 @@ dotnet build ProjectSeshat.sln
 dotnet test ProjectSeshat.sln
 ```
 
-The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core. It automatically watches your Elite Dangerous journal folder and tail-imports new events as you play, so the statistics and search guide stay current without any manual action (already-loaded content is deduplicated by fingerprint/file path). It can also stream live crowdsourced discoveries from **EDDN** and plot routes through **Spansh**.
+The desktop application uses Avalonia, wired to a SQLite database via Entity Framework Core. It automatically watches your Elite Dangerous journal folder and tail-imports new events as you play, so the statistics and search guide stay current without any manual action (already-loaded content is deduplicated by fingerprint/file path). It can also stream live crowdsourced discoveries from **EDDN** and plot routes through **Spansh**. It parses **beacon scans** from your journal to surface Raxxla-hunt leads.
 
 ## Guided search
 
@@ -39,7 +39,19 @@ The **Atlas Survey** page is a guided search tool that tells you what to do next
 
 Each entry explains **why** it's a priority: FSS shows the interesting signal types found there, and DSS explains a body's value (terraformable, Earth-like, water, or ammonia world).
 
-It's driven by your journal files: coordinates come from `StarPos` on `FSDJump`, the system honk from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. The app also provides an interactive **3D galactic sky-map** of surveyed systems, ranked undiscovered regions, your current position, and the next jump target, plus a persisted **Atlas Survey** listing of frontier regions that survives restarts.
+It's driven by your journal files: coordinates come from `StarPos` on `FSDJump`, the system honk from `FSSDiscoveryScan`/`DiscoveryScan`, and body details from `Scan` events. **Beacon scans** are also parsed and scanned for Raxxla-hunt lore terms (names like "Raxxla", "Omphalos", "Dark Wheel", etc.). The app also provides an interactive **3D galactic sky-map** of surveyed systems, ranked undiscovered regions, your current position, and the next jump target, plus a persisted **Atlas Survey** listing of frontier regions that survives restarts.
+
+## Raxxla hunt intel
+
+The **Search Guide** surfaces community-derived Raxxla search priorities in a dedicated "RAXXLA INTEL" panel:
+
+- **Signal intel** — unusual signal types (Non-Human, Thargoid, Guardian, Anomaly, etc.)
+- **Body intel** — notable body classes (Earth-like, water world, ammonia world, 8th moon of a gas giant)
+- **Name intel** — system/body names matching lore terms (Raxxla, Omphalos, Dark Wheel, etc.)
+- **Beacon intel** — scanned beacon names, owners, or types matching lore terms
+- **Proximity** — systems inside the Sol-centred 200 ly hunt bubble
+
+These are investigation *priorities*, not claimed locations. The "NEXT RAXXLA MOVE" card highlights the top-ranked action.
 
 ## In-game guidance
 

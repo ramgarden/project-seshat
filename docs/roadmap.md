@@ -158,6 +158,17 @@ Goal: apply the community's actual hunt criteria (Great Raxxla Potato Hunt playb
 - [x] Fix navigation-state persistence so repeated journal imports update the existing row without EF tracking/SQLite uniqueness conflicts.
 - [x] Add focused tests for planner priority, Raxxla selection, guidance formatting, automation, async refresh, and navigation-state updates.
 
+## Milestone 1.15 — Beacon scanning & Raxxla intel integration
+
+- [x] Add `BeaconScan` domain record + `IBeaconRepository`/`BeaconRepository` for persisting Elite Dangerous beacon scans.
+- [x] Parse `BeaconScan`/`BeaconFound` journal events in `JournalReader` (deduped by SHA-256 fingerprint).
+- [x] Wire beacon repository through `JournalWatcher` and App composition.
+- [x] Dashboard shows "BEACONS INDEXED" count.
+- [x] `RaxxlaSearchIntel.ReasonForBeacon` scans beacon name, owner, and type for lore terms.
+- [x] Beacon hits appear in "RAXXLA INTEL" panel tagged "BEACON".
+- [x] Add EF migration `AddBeaconScans`.
+- [x] All 142 tests passing.
+
 ## Next
 
 - [ ] Plot Spansh routes into the search guide jump plotter.
