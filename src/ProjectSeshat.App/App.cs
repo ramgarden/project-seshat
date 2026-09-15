@@ -101,7 +101,8 @@ public sealed class App : Application
             surveyRegionRepository,
             communityService,
             new WindowsSpeechVoicePinger(),
-            keyAutomation);
+            keyAutomation,
+            databasePath);
 
         return viewModel;
     }

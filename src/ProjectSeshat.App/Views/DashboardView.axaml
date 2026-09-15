@@ -128,6 +128,25 @@
           <Button Classes="toggle" Command="{Binding ToggleCommunityCommand}">
             <TextBlock Text="{Binding CommunityToggleText}" />
           </Button>
+          <Button Classes="toggle" Command="{Binding ResetDatabaseCommand}" Background="#8B3A3A" Foreground="#FFE0E0">
+            <Button.Styles>
+              <Style Selector="Button.toggle:pointerover">
+                <Setter Property="Background" Value="#B04A4A" />
+              </Style>
+              <Style Selector="Button.toggle:pointerover /template/ ContentPresenter">
+                <Setter Property="Background" Value="#B04A4A" />
+              </Style>
+              <Style Selector="Button.toggle:pressed">
+                <Setter Property="Background" Value="#6B2A2A" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
+              </Style>
+              <Style Selector="Button.toggle:pressed /template/ ContentPresenter">
+                <Setter Property="Background" Value="#6B2A2A" />
+                <Setter Property="Foreground" Value="#FFFFFF" />
+              </Style>
+            </Button.Styles>
+            <TextBlock Text="Reset Database" />
+          </Button>
         </StackPanel>
         <TextBlock Text="{Binding CommunityDiscoverySummary}" Foreground="#7FCFB0" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding CommunityAvailable}" />
         <TextBlock Text="Stream live, crowdsourced discoveries from EDDN to see where the wider playerbase is and has been — invaluable for the Raxxla hunt." Foreground="#83B8D5" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding CommunityAvailable}" />

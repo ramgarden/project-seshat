@@ -47,7 +47,8 @@ public sealed class MainWindowViewModel : ViewModelBase
         ISurveyRegionRepository? surveyRegionRepository = null,
         CommunityService? communityService = null,
         IVoicePinger? voicePinger = null,
-        KeyAutomationService? keyAutomation = null)
+        KeyAutomationService? keyAutomation = null,
+        string? databasePath = null)
     {
         Dashboard = new DashboardViewModel(
             starSystemRepository,
@@ -58,7 +59,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             beaconRepository,
             codexEntryRepository,
             observationRepository,
-            communityService);
+            communityService,
+            databasePath);
 
         SearchGuide = new SearchGuideViewModel(
             atlasService,

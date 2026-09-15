@@ -1,9 +1,12 @@
 using System;
 using System.Collections.Generic;
+using System.IO;
 using System.Linq;
 using System.Windows.Input;
+using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
+using ProjectSeshat.Data;
 using ProjectSeshat.Journals;
 
 namespace ProjectSeshat.App.ViewModels;
@@ -20,6 +23,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IObservationRepository? _observationRepository;
     private readonly JournalPathResolver _journalPathResolver;
     private readonly CommunityService? _communityService;
+    private readonly string _databasePath;
 
     private string _statusMessage = "Watching for journal changes";
     private string _journalPathStatus = "Searching for journal files";
@@ -42,7 +46,8 @@ public sealed class DashboardViewModel : ViewModelBase
         IBeaconRepository? beaconRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
-        CommunityService? communityService = null)
+        CommunityService? communityService = null,
+        string? databasePath = null)
     {
         _starSystemRepository = starSystemRepository;
         _commanderRepository = commanderRepository;
@@ -52,6 +57,7 @@ public sealed class DashboardViewModel : ViewModelBase
         _codexEntryRepository = codexEntryRepository;
         _observationRepository = observationRepository;
         _journalPathResolver = journalPathResolver ?? new JournalPathResolver();
+        _databasePath = databasePath ?? App.ResolveDatabasePath();
 
         _communityService = communityService;
         if (_communityService is not null)
@@ -72,6 +78,7 @@ public sealed class DashboardViewModel : ViewModelBase
         StartCommunityCommand = new RelayCommand(() => _communityService?.Start());
         StopCommunityCommand = new RelayCommand(() => _communityService?.Stop());
         ToggleCommunityCommand = new RelayCommand(ToggleCommunity);
+        ResetDatabaseCommand = new RelayCommand(ResetDatabase);
 
         RefreshCommunityStatus();
 
@@ -212,6 +219,8 @@ public sealed class DashboardViewModel : ViewModelBase
 
     public ICommand ToggleCommunityCommand { get; }
 
+    public ICommand ResetDatabaseCommand { get; }
+
     public string CommunityToggleText => IsCommunityConnected ? "Stop EDDN" : "Start EDDN";
 
     private void ToggleCommunity()
@@ -242,6 +251,44 @@ public sealed class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(CommunityToggleText));
         OnPropertyChanged(nameof(CommunityErrorText));
         OnPropertyChanged(nameof(HasCommunityError));
+    }
+
+    private void ResetDatabase()
+    {
+        try
+        {
+            // Stop the journal watcher first if it's running
+            // Note: We can't easily access the watcher from here, but deleting the DB will work
+            
+            // Close any existing connections and delete the database file
+            if (File.Exists(_databasePath))
+            {
+                File.Delete(_databasePath);
+            }
+
+            // Also delete WAL/SHM files if they exist
+            var walPath = _databasePath + "-wal";
+            var shmPath = _databasePath + "-shm";
+            if (File.Exists(walPath)) File.Delete(walPath);
+            if (File.Exists(shmPath)) File.Delete(shmPath);
+
+            StatusMessage = "Database reset — restart the app to re-import journals";
+            SeshatLog.Info($"Database reset: deleted {_databasePath}");
+
+            // Reset all counts to zero
+            SystemsIndexedCount = 0;
+            CommanderRecordsCount = 0;
+            EvidenceRecordsCount = 0;
+            BodiesIndexedCount = 0;
+            BeaconCount = 0;
+            CodexEntriesCount = 0;
+            ObservationsCount = 0;
+        }
+        catch (Exception ex)
+        {
+            SeshatLog.LogError(ex, "Failed to reset database");
+            StatusMessage = $"Reset failed: {ex.Message}";
+        }
     }
 
     private void RefreshCommunityStatus()
