@@ -29,6 +29,8 @@ public sealed class ProjectSeshatDbContext : DbContext
 
     public DbSet<CelestialBody> CelestialBodies => Set<CelestialBody>();
 
+    public DbSet<BeaconScan> Beacons => Set<BeaconScan>();
+
     public DbSet<CodexEntry> CodexEntries => Set<CodexEntry>();
 
     public DbSet<Observation> Observations => Set<Observation>();
@@ -101,6 +103,23 @@ public sealed class ProjectSeshatDbContext : DbContext
             entity.Property(x => x.Kind).HasConversion<string>();
             entity.Property(x => x.ScanStatus).HasConversion<string>();
             entity.Property(x => x.WorthDss);
+        });
+
+        modelBuilder.Entity<BeaconScan>(entity =>
+        {
+            entity.HasKey(x => x.Id);
+            entity.Property(x => x.Id).HasConversion(
+                id => id.Value,
+                value => new BeaconScanId(value));
+            entity.Property(x => x.BeaconName).IsRequired();
+            entity.Property(x => x.SystemName).IsRequired();
+            entity.Property(x => x.BeaconType);
+            entity.Property(x => x.BeaconOwner);
+            entity.Property(x => x.SystemAddress);
+            entity.Property(x => x.ObservedAt).IsRequired();
+            entity.Property(x => x.Fingerprint).IsRequired();
+            entity.HasIndex(x => x.SystemName);
+            entity.HasIndex(x => x.Fingerprint).IsUnique();
         });
 
         modelBuilder.Entity<CodexEntry>(entity =>

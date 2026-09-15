@@ -36,6 +36,7 @@ public sealed class MainWindowViewModel : ViewModelBase
         IEvidenceRepository evidenceRepository,
         JournalPathResolver? journalPathResolver = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
+        IBeaconRepository? beaconRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
         INavigationStateRepository? navigationRepository = null,
@@ -54,11 +55,17 @@ public sealed class MainWindowViewModel : ViewModelBase
             evidenceRepository,
             journalPathResolver,
             celestialBodyRepository,
+            beaconRepository,
             codexEntryRepository,
             observationRepository,
             communityService);
 
-        SearchGuide = new SearchGuideViewModel(atlasService, starSystemRepository, celestialBodyRepository, navigationRepository);
+        SearchGuide = new SearchGuideViewModel(
+            atlasService,
+            starSystemRepository,
+            celestialBodyRepository,
+            navigationRepository,
+            beaconRepository);
         GalaxyMap = new GalaxyMapViewModel(atlasService, starSystemRepository, navigationRepository, surveyRegionRepository);
         Survey = new SurveyViewModel(atlasService, starSystemRepository, surveyRegionRepository);
 

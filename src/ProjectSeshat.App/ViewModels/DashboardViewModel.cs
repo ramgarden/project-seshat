@@ -15,6 +15,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly ICommanderRepository _commanderRepository;
     private readonly IEvidenceRepository _evidenceRepository;
     private readonly ICelestialBodyRepository? _celestialBodyRepository;
+    private readonly IBeaconRepository? _beaconRepository;
     private readonly ICodexEntryRepository? _codexEntryRepository;
     private readonly IObservationRepository? _observationRepository;
     private readonly JournalPathResolver _journalPathResolver;
@@ -28,6 +29,7 @@ public sealed class DashboardViewModel : ViewModelBase
     private int _commanderRecordsCount;
     private int _evidenceRecordsCount;
     private int _bodiesIndexedCount;
+    private int _beaconCount;
     private int _codexEntriesCount;
     private int _observationsCount;
 
@@ -37,6 +39,7 @@ public sealed class DashboardViewModel : ViewModelBase
         IEvidenceRepository evidenceRepository,
         JournalPathResolver? journalPathResolver = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
+        IBeaconRepository? beaconRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
         CommunityService? communityService = null)
@@ -45,6 +48,7 @@ public sealed class DashboardViewModel : ViewModelBase
         _commanderRepository = commanderRepository;
         _evidenceRepository = evidenceRepository;
         _celestialBodyRepository = celestialBodyRepository;
+        _beaconRepository = beaconRepository;
         _codexEntryRepository = codexEntryRepository;
         _observationRepository = observationRepository;
         _journalPathResolver = journalPathResolver ?? new JournalPathResolver();
@@ -85,6 +89,7 @@ public sealed class DashboardViewModel : ViewModelBase
     public string CommanderRecordsLabel => "COMMANDER RECORDS";
     public string EvidenceRecordsLabel => "EVIDENCE RECORDS";
     public string BodiesIndexedLabel => "BODIES CATALOGUED";
+    public string BeaconsIndexedLabel => "BEACONS INDEXED";
     public string CodexEntriesLabel => "CODEX ENTRIES";
     public string ObservationsLabel => "OBSERVATIONS";
 
@@ -124,6 +129,12 @@ public sealed class DashboardViewModel : ViewModelBase
         private set => SetProperty(ref _observationsCount, value);
     }
 
+    public int BeaconCount
+    {
+        get => _beaconCount;
+        private set => SetProperty(ref _beaconCount, value);
+    }
+
     public string StatusMessage
     {
         get => _statusMessage;
@@ -154,6 +165,7 @@ public sealed class DashboardViewModel : ViewModelBase
         CommanderRecordsCount = _commanderRepository.CountAsync().GetAwaiter().GetResult();
         EvidenceRecordsCount = _evidenceRepository.CountAsync().GetAwaiter().GetResult();
         BodiesIndexedCount = _celestialBodyRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
+        BeaconCount = _beaconRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
         CodexEntriesCount = _codexEntryRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
         ObservationsCount = _observationRepository?.CountAsync().GetAwaiter().GetResult() ?? 0;
     }

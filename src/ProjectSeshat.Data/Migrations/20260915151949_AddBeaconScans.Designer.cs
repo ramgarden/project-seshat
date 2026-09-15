@@ -2,6 +2,7 @@
 using System;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore.Infrastructure;
+using Microsoft.EntityFrameworkCore.Migrations;
 using Microsoft.EntityFrameworkCore.Storage.ValueConversion;
 using ProjectSeshat.Data;
 
@@ -10,9 +11,11 @@ using ProjectSeshat.Data;
 namespace ProjectSeshat.Data.Migrations
 {
     [DbContext(typeof(ProjectSeshatDbContext))]
-    partial class ProjectSeshatDbContextModelSnapshot : ModelSnapshot
+    [Migration("20260915151949_AddBeaconScans")]
+    partial class AddBeaconScans
     {
-        protected override void BuildModel(ModelBuilder modelBuilder)
+        /// <inheritdoc />
+        protected override void BuildTargetModel(ModelBuilder modelBuilder)
         {
 #pragma warning disable 612, 618
             modelBuilder.HasAnnotation("ProductVersion", "9.0.8");

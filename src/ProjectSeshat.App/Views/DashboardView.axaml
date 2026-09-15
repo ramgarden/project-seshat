@@ -47,62 +47,70 @@
     <ScrollViewer Grid.Row="0"
                   ScrollViewer.HorizontalScrollBarVisibility="Disabled"
                   ScrollViewer.VerticalScrollBarVisibility="Auto">
-      <StackPanel>
-    <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
       <StackPanel Spacing="18">
-        <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
+        <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="24" VerticalAlignment="Top" Margin="0,0,0,20">
+          <StackPanel Spacing="18">
+            <TextBlock Classes="section-label" Text="{Binding StatisticsHeading}" />
 
-        <!-- Row 1: Systems / Commanders / Evidence -->
-        <Grid ColumnDefinitions="*,18,*,18,*">
-          <Border Classes="stat-card" Grid.Column="0">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
-              <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-            </StackPanel>
-          </Border>
-          <Border Classes="stat-card" Grid.Column="2">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
-              <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-            </StackPanel>
-          </Border>
-          <Border Classes="stat-card" Grid.Column="4">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
-              <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
-            </StackPanel>
-          </Border>
-        </Grid>
+            <!-- Row 1: Systems / Commanders / Evidence -->
+            <Grid ColumnDefinitions="*,18,*,18,*">
+              <Border Classes="stat-card" Grid.Column="0">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding SystemsIndexedLabel}" />
+                  <TextBlock Text="{Binding SystemsIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat-card" Grid.Column="2">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding CommanderRecordsLabel}" />
+                  <TextBlock Text="{Binding CommanderRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat-card" Grid.Column="4">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding EvidenceRecordsLabel}" />
+                  <TextBlock Text="{Binding EvidenceRecordsCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+                </StackPanel>
+              </Border>
+            </Grid>
 
-        <!-- Row 2: Bodies / Codex / Observations -->
-        <Grid ColumnDefinitions="*,18,*,18,*" Margin="0,4,0,0">
-          <Border Classes="stat-card" Grid.Column="0">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding BodiesIndexedLabel}" />
-              <TextBlock Text="{Binding BodiesIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
-            </StackPanel>
-          </Border>
-          <Border Classes="stat-card" Grid.Column="2">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding CodexEntriesLabel}" />
-              <TextBlock Text="{Binding CodexEntriesCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
-            </StackPanel>
-          </Border>
-          <Border Classes="stat-card" Grid.Column="4">
-            <StackPanel Spacing="10">
-              <TextBlock Classes="section-label" Text="{Binding ObservationsLabel}" />
-              <TextBlock Text="{Binding ObservationsCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
-            </StackPanel>
-          </Border>
-        </Grid>
-      </StackPanel>
-    </Border>
-      </StackPanel>
-    </ScrollViewer>
+            <!-- Row 2: Bodies / Codex / Observations -->
+            <Grid ColumnDefinitions="*,18,*,18,*" Margin="0,4,0,0">
+              <Border Classes="stat-card" Grid.Column="0">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding BodiesIndexedLabel}" />
+                  <TextBlock Text="{Binding BodiesIndexedCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat-card" Grid.Column="2">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding CodexEntriesLabel}" />
+                  <TextBlock Text="{Binding CodexEntriesCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
+                </StackPanel>
+              </Border>
+              <Border Classes="stat-card" Grid.Column="4">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding ObservationsLabel}" />
+                  <TextBlock Text="{Binding ObservationsCount}" FontSize="36" FontWeight="Light" Foreground="#7FCFB0" />
+                </StackPanel>
+              </Border>
+            </Grid>
 
-    <!-- Live Ingestion Panel -->
-    <Border Grid.Row="1" Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
-      <StackPanel Spacing="10">
+            <!-- Row 3: Beacons -->
+            <Grid ColumnDefinitions="*,18,*,18,*" Margin="0,4,0,0">
+              <Border Classes="stat-card" Grid.Column="0">
+                <StackPanel Spacing="10">
+                  <TextBlock Classes="section-label" Text="{Binding BeaconsIndexedLabel}" />
+                  <TextBlock Text="{Binding BeaconCount}" FontSize="36" FontWeight="Light" Foreground="#E5F5FF" />
+                </StackPanel>
+              </Border>
+            </Grid>
+          </StackPanel>
+        </Border>
+
+        <!-- Live Ingestion Panel -->
+        <Border Background="#0E1D2E" BorderBrush="#1A4D67" BorderThickness="1" CornerRadius="6" Padding="18">
+          <StackPanel Spacing="10">
         <StackPanel Orientation="Horizontal" Spacing="12">
           <Ellipse Width="10" Height="10" Fill="#36C5F0" VerticalAlignment="Center" />
           <TextBlock Text="{Binding StatusMessage}" Foreground="#D2EAF7" FontSize="15" VerticalAlignment="Center" />
@@ -140,5 +148,7 @@
         <TextBlock Text="{Binding CommunityErrorText}" Foreground="#FF8F8F" FontSize="12" TextWrapping="Wrap" IsVisible="{Binding HasCommunityError}" />
       </StackPanel>
     </Border>
-  </Grid>
+  </StackPanel>
+</ScrollViewer>
+</Grid>
 </UserControl>

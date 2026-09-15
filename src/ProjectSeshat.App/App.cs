@@ -64,6 +64,7 @@ public sealed class App : Application
         var evidenceRepository = new EvidenceRepository(context);
         var importTrackerRepository = new JournalImportTrackerRepository(context);
         var celestialBodyRepository = new CelestialBodyRepository(context);
+        var beaconRepository = new BeaconRepository(context);
         var codexEntryRepository = new CodexEntryRepository(context);
         var observationRepository = new ObservationRepository(context);
         var navigationRepository = new NavigationStateRepository(context);
@@ -75,7 +76,11 @@ public sealed class App : Application
         var atlasService = new AtlasService();
         var journalReader = new JournalReader();
         var pathResolver = new JournalPathResolver();
-        var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository, celestialBodyRepository, codexEntryRepository, navigationRepository);
+        var journalWatcher = CreateJournalWatcher(pathResolver, journalReader, starSystemRepository, commanderRepository, evidenceRepository, importTrackerRepository,
+            celestialBodyRepository,
+            beaconRepository,
+            codexEntryRepository,
+            navigationRepository);
         var communityService = new CommunityService(new EddnListener(new NetMqEddnTransport()), communityDiscoveryRepository);
         var keyAutomation = new KeyAutomationService();
 
@@ -85,6 +90,7 @@ public sealed class App : Application
             evidenceRepository,
             pathResolver,
             celestialBodyRepository,
+            beaconRepository,
             codexEntryRepository,
             observationRepository,
             navigationRepository,
@@ -108,6 +114,7 @@ public sealed class App : Application
         IEvidenceRepository evidenceRepository,
         IJournalImportTrackerRepository importTrackerRepository,
         ICelestialBodyRepository? celestialBodyRepository,
+        IBeaconRepository beaconRepository,
         ICodexEntryRepository? codexEntryRepository,
         INavigationStateRepository navigationRepository)
     {
@@ -126,6 +133,7 @@ public sealed class App : Application
             importTrackerRepository,
             celestialBodyRepository,
             codexEntryRepository,
+            beaconRepository,
             navigationRepository);
     }
 

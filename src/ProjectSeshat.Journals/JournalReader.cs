@@ -1,3 +1,4 @@
+using System.Globalization;
 using System.Text.Json;
 using ProjectSeshat.Core.Contracts;
 using ProjectSeshat.Core.Domain;
@@ -17,6 +18,7 @@ public sealed class JournalReader
         CancellationToken cancellationToken = default,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
+        IBeaconRepository? beaconRepository = null,
         string? contentFingerprint = null,
         INavigationStateRepository? navigationRepository = null)
     {
@@ -60,6 +62,7 @@ public sealed class JournalReader
                 celestialBodyRepository,
                 codexEntryRepository,
                 navigationRepository,
+                beaconRepository,
                 cancellationToken);
         }
 
@@ -138,6 +141,7 @@ public sealed class JournalReader
         ICelestialBodyRepository? celestialBodyRepository,
         ICodexEntryRepository? codexEntryRepository,
         INavigationStateRepository? navigationRepository,
+        IBeaconRepository? beaconRepository,
         CancellationToken cancellationToken)
     {
         var payload = JsonSerializer.Deserialize<Dictionary<string, JsonElement>>(line);
@@ -270,7 +274,44 @@ public sealed class JournalReader
             return;
         }
 
-        if (eventType == "Scan" && payload.TryGetValue("BodyName", out var scanBodyName))
+        if (eventType is "BeaconScan" or "BeaconFound")
+        {
+            var beaconName = GetJournalString(payload, "BeaconName", "Name");
+            var beaconOwner = GetJournalString(payload, "BeaconOwner", "Owner");
+            var beaconSystemName = GetJournalString(payload, "StarSystem", "SystemName");
+            if (!string.IsNullOrWhiteSpace(beaconName) && !string.IsNullOrWhiteSpace(beaconSystemName))
+            {
+                var beaconId = GetJournalGuid(payload, "Id", out var id)
+                    ? new BeaconScanId(id)
+                    : new BeaconScanId(Guid.NewGuid());
+                var beaconType = GetJournalString(payload, "BeaconType") ?? "Unknown";
+                var beaconOwnerValue = beaconOwner ?? string.Empty;
+                var systemAddress = GetJournalInt64(payload, "SystemAddress", out var systemAddressValue)
+                    ? (long?)systemAddressValue
+                    : null;
+                var observedAt = GetJournalDateTimeOffset(payload, "ScanDate")
+                    ?? GetJournalDateTimeOffset(payload, "timestamp")
+                    ?? DateTimeOffset.UtcNow;
+                var fingerprint = GetJournalString(payload, "Fingerprint", "id")
+                    ?? $"{eventType}:{beaconSystemName}:{beaconName}:{beaconOwnerValue}:{beaconType}:{observedAt.UtcDateTime:O}";
+
+                await EnsureSystemAsync(starSystemRepository, beaconSystemName, cancellationToken);
+
+                await beaconRepository!.SaveAsync(new BeaconScan(
+                    beaconId,
+                    beaconName,
+                    beaconType,
+                    beaconOwnerValue,
+                    beaconSystemName,
+                    systemAddress,
+                    observedAt,
+                    fingerprint), cancellationToken);
+            }
+
+            return;
+        }
+
+            if (eventType == "Scan" && payload.TryGetValue("BodyName", out var scanBodyName))
         {
             var bodyNameValue = scanBodyName.GetString() ?? string.Empty;
             if (string.IsNullOrWhiteSpace(bodyNameValue))
@@ -456,6 +497,85 @@ public sealed class JournalReader
             : state with { CurrentSystemId = system.Id, LastUpdatedAt = DateTimeOffset.UtcNow };
 
         await navigationRepository.SaveAsync(updated, cancellationToken);
+    }
+
+    private static string? GetJournalString(Dictionary<string, JsonElement> payload, params string[] names)
+    {
+        foreach (var name in names)
+        {
+            if (payload.TryGetValue(name, out var value) && value.ValueKind == JsonValueKind.String)
+            {
+                return value.GetString();
+            }
+        }
+
+        return null;
+    }
+
+    private static bool GetJournalInt64(Dictionary<string, JsonElement> payload, string name, out long value)
+    {
+        value = 0;
+        if (!payload.TryGetValue(name, out var jsonValue) ||
+            (jsonValue.ValueKind != JsonValueKind.Number && jsonValue.ValueKind != JsonValueKind.String))
+        {
+            return false;
+        }
+
+        if (jsonValue.ValueKind == JsonValueKind.Number && jsonValue.TryGetInt64(out value))
+        {
+            return true;
+        }
+
+        return jsonValue.ValueKind == JsonValueKind.String && long.TryParse(jsonValue.GetString(), out value);
+    }
+
+    private static DateTimeOffset? GetJournalDateTimeOffset(Dictionary<string, JsonElement> payload, string name)
+    {
+        if (!payload.TryGetValue(name, out var value) || value.ValueKind != JsonValueKind.String)
+        {
+            return null;
+        }
+
+        return DateTimeOffset.TryParse(value.GetString(), out var parsed) ? parsed : null;
+    }
+
+    private static bool GetJournalGuid(Dictionary<string, JsonElement> payload, string name, out Guid value)
+    {
+        value = Guid.Empty;
+        if (!payload.TryGetValue(name, out var jsonValue) ||
+            (jsonValue.ValueKind != JsonValueKind.String && jsonValue.ValueKind != JsonValueKind.Number))
+        {
+            return false;
+        }
+
+        if (jsonValue.ValueKind == JsonValueKind.String && Guid.TryParse(jsonValue.GetString(), out value))
+        {
+            return true;
+        }
+
+        if (jsonValue.ValueKind == JsonValueKind.Number && jsonValue.TryGetInt64(out var longValue))
+        {
+            value = new Guid(BitConverter.GetBytes(longValue));
+            return true;
+        }
+
+        return false;
+    }
+
+    private static async Task EnsureSystemAsync(
+        IStarSystemRepository repository,
+        string systemName,
+        CancellationToken cancellationToken)
+    {
+        if (string.IsNullOrWhiteSpace(systemName) || await repository.ExistsByNameAsync(systemName, cancellationToken))
+        {
+            return;
+        }
+
+        var system = new StarSystem(
+            new StarSystemId(Math.Abs(systemName.GetHashCode(StringComparison.Ordinal))),
+            systemName);
+        await repository.SaveAsync(system, cancellationToken);
     }
 
     /// <summary>

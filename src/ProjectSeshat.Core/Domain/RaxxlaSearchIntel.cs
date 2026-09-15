@@ -5,7 +5,7 @@ namespace ProjectSeshat.Core.Domain;
 /// with the reason it was flagged (which community hint matched).
 /// </summary>
 public sealed record RaxxlaIntelHit(
-    string Type,       // "Signal" | "Body" | "Name" | "Proximity"
+    string Type,       // "Signal" | "Body" | "Name" | "Beacon" | "Proximity"
     string SystemName,
     string Target,     // the body/signal/system name that matched
     string Reason,     // human-readable why-it's-worth-a-look
@@ -131,6 +131,16 @@ public static class RaxxlaSearchIntel
         }
 
         return null;
+    }
+
+    /// <summary>Returns a reason (or null) when a scanned beacon name, owner, or type contains a lore term.</summary>
+    public static string? ReasonForBeacon(BeaconScan beacon)
+    {
+        var reasons = new List<string>();
+        if (ReasonForLoreName(beacon.BeaconName) is { } nameReason) reasons.Add(nameReason);
+        if (ReasonForLoreName(beacon.BeaconOwner) is { } ownerReason) reasons.Add(ownerReason);
+        if (ReasonForLoreName(beacon.BeaconType) is { } typeReason) reasons.Add(typeReason);
+        return reasons.Count == 0 ? null : string.Join("; ", reasons) + $" — scanned beacon in {beacon.SystemName}";
     }
 
     /// <summary>True when the position is inside the Sol-centred hunt bubble.</summary>

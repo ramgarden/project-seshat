@@ -22,6 +22,7 @@ public sealed class JournalWatcher : IDisposable
     private readonly IJournalImportTrackerRepository? _importTrackerRepository;
     private readonly ICelestialBodyRepository? _celestialBodyRepository;
     private readonly ICodexEntryRepository? _codexEntryRepository;
+    private readonly IBeaconRepository? _beaconRepository;
     private readonly INavigationStateRepository? _navigationRepository;
     private readonly Dictionary<string, long> _offsets = new(StringComparer.OrdinalIgnoreCase);
     private readonly HashSet<string> _fullyImported = new(StringComparer.OrdinalIgnoreCase);
@@ -45,6 +46,7 @@ public sealed class JournalWatcher : IDisposable
         IJournalImportTrackerRepository? importTrackerRepository = null,
         ICelestialBodyRepository? celestialBodyRepository = null,
         ICodexEntryRepository? codexEntryRepository = null,
+        IBeaconRepository? beaconRepository = null,
         INavigationStateRepository? navigationRepository = null)
     {
         if (string.IsNullOrWhiteSpace(directory))
@@ -60,6 +62,7 @@ public sealed class JournalWatcher : IDisposable
         _importTrackerRepository = importTrackerRepository;
         _celestialBodyRepository = celestialBodyRepository;
         _codexEntryRepository = codexEntryRepository;
+        _beaconRepository = beaconRepository;
         _navigationRepository = navigationRepository;
     }
 
@@ -165,6 +168,7 @@ public sealed class JournalWatcher : IDisposable
             _starSystemRepository,
             _commanderRepository,
             _evidenceRepository,
+            beaconRepository: _beaconRepository,
             celestialBodyRepository: _celestialBodyRepository,
             codexEntryRepository: _codexEntryRepository,
             navigationRepository: _navigationRepository,
@@ -239,6 +243,7 @@ public sealed class JournalWatcher : IDisposable
             cancellationToken: cancellationToken,
             celestialBodyRepository: _celestialBodyRepository,
             codexEntryRepository: _codexEntryRepository,
+            beaconRepository: _beaconRepository,
             contentFingerprint: fingerprint,
             navigationRepository: _navigationRepository);
 

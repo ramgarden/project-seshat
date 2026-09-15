@@ -12,6 +12,9 @@ public readonly record struct EvidenceId(Guid Value);
 /// <summary>Identifies a celestial body catalogued in the atlas.</summary>
 public readonly record struct CelestialBodyId(Guid Value);
 
+/// <summary>Identifies a beacon scan captured from the journal.</summary>
+public readonly record struct BeaconScanId(Guid Value);
+
 /// <summary>Identifies an entry in the discovery codex.</summary>
 public readonly record struct CodexEntryId(Guid Value);
 

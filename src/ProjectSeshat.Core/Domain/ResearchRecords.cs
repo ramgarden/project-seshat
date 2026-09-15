@@ -121,6 +121,17 @@ public sealed record CelestialBody(
     ScanStatus ScanStatus = ScanStatus.Discovered,
     bool WorthDss = false);
 
+/// <summary>Represents a beacon scan captured from the journal.</summary>
+public sealed record BeaconScan(
+    BeaconScanId Id,
+    string BeaconName,
+    string? BeaconType,
+    string? BeaconOwner,
+    string SystemName,
+    long? SystemAddress,
+    DateTimeOffset ObservedAt,
+    string Fingerprint);
+
 // ── Codex ────────────────────────────────────────────────────────────────────
 
 /// <summary>Groups a codex discovery by its broad research category.</summary>

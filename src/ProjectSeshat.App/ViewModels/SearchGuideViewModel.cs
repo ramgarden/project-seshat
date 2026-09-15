@@ -16,6 +16,7 @@ public sealed class SearchGuideViewModel : ViewModelBase
     private readonly AtlasService? _atlas;
     private readonly IStarSystemRepository? _systemRepository;
     private readonly ICelestialBodyRepository? _bodyRepository;
+    private readonly IBeaconRepository? _beaconRepository;
     private readonly INavigationStateRepository? _navigationRepository;
     private string _summaryText = "No surveyed systems yet. Import journal files to build a search guide.";
     private string _nextJumpTitle = "No next jump";
@@ -36,12 +37,14 @@ public sealed class SearchGuideViewModel : ViewModelBase
         AtlasService? atlas = null,
         IStarSystemRepository? systemRepository = null,
         ICelestialBodyRepository? bodyRepository = null,
-        INavigationStateRepository? navigationRepository = null)
+        INavigationStateRepository? navigationRepository = null,
+        IBeaconRepository? beaconRepository = null)
     {
         _atlas = atlas;
         _systemRepository = systemRepository;
         _bodyRepository = bodyRepository;
         _navigationRepository = navigationRepository;
+        _beaconRepository = beaconRepository;
 
         SelectRecommendedGateCommand = new RelayCommand(async () => { await SelectRecommendedGate(); });
         SelectNearestGateCommand = new RelayCommand(async () => { await SelectNearestGate(); });
@@ -448,17 +451,31 @@ public sealed class SearchGuideViewModel : ViewModelBase
             }
 
             RaxxlaIntelItems.Clear();
-            var intel = await _atlas.FindRaxxlaIntelAsync(
+            var intelHits = new List<RaxxlaIntelHit>(await _atlas.FindRaxxlaIntelAsync(
                 _systemRepository,
                 _bodyRepository,
-                cancellationToken: cancellationToken);
+                maxHits: 50,
+                cancellationToken: cancellationToken));
 
             if (!IsCurrentRefresh(refreshVersion, cancellationToken))
             {
                 return;
             }
 
-            foreach (var hit in intel)
+            // Also check beacons for Raxxla-relevant lore terms
+            if (_beaconRepository is not null)
+            {
+                var beacons = await _beaconRepository.ListAsync(100, cancellationToken);
+                foreach (var beacon in beacons)
+                {
+                    if (RaxxlaSearchIntel.ReasonForBeacon(beacon) is { } beaconReason)
+                    {
+                        intelHits.Add(new RaxxlaIntelHit("Beacon", beacon.SystemName, beacon.BeaconName, beaconReason, 4));
+                    }
+                }
+            }
+
+            foreach (var hit in intelHits)
             {
                 RaxxlaIntelItems.Add(GuideTarget.Intel(hit));
             }
