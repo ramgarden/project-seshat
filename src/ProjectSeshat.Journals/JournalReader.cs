@@ -274,38 +274,67 @@ public sealed class JournalReader
             return;
         }
 
-        if (eventType is "BeaconScan" or "BeaconFound")
+        if (eventType is "NavBeaconScan")
         {
-            var beaconName = GetJournalString(payload, "BeaconName", "Name");
-            var beaconOwner = GetJournalString(payload, "BeaconOwner", "Owner");
             var beaconSystemName = GetJournalString(payload, "StarSystem", "SystemName");
-            if (!string.IsNullOrWhiteSpace(beaconName) && !string.IsNullOrWhiteSpace(beaconSystemName))
+            if (!string.IsNullOrWhiteSpace(beaconSystemName))
             {
-                var beaconId = GetJournalGuid(payload, "Id", out var id)
-                    ? new BeaconScanId(id)
-                    : new BeaconScanId(Guid.NewGuid());
-                var beaconType = GetJournalString(payload, "BeaconType") ?? "Unknown";
-                var beaconOwnerValue = beaconOwner ?? string.Empty;
+                var beaconId = new BeaconScanId(Guid.NewGuid());
                 var systemAddress = GetJournalInt64(payload, "SystemAddress", out var systemAddressValue)
                     ? (long?)systemAddressValue
                     : null;
-                var observedAt = GetJournalDateTimeOffset(payload, "ScanDate")
-                    ?? GetJournalDateTimeOffset(payload, "timestamp")
+                var observedAt = GetJournalDateTimeOffset(payload, "timestamp")
                     ?? DateTimeOffset.UtcNow;
-                var fingerprint = GetJournalString(payload, "Fingerprint", "id")
-                    ?? $"{eventType}:{beaconSystemName}:{beaconName}:{beaconOwnerValue}:{beaconType}:{observedAt.UtcDateTime:O}";
+                var fingerprint = $"NavBeaconScan:{beaconSystemName}:{observedAt.UtcDateTime:O}";
 
                 await EnsureSystemAsync(starSystemRepository, beaconSystemName, cancellationToken);
 
                 await beaconRepository!.SaveAsync(new BeaconScan(
                     beaconId,
-                    beaconName,
-                    beaconType,
-                    beaconOwnerValue,
+                    "Nav Beacon",
+                    "NavBeacon",
+                    string.Empty,
                     beaconSystemName,
                     systemAddress,
                     observedAt,
                     fingerprint), cancellationToken);
+            }
+
+            return;
+        }
+
+        if (eventType == "FSSSignalDiscovered")
+        {
+            var signalType = GetJournalString(payload, "SignalType");
+            if (signalType is "NavBeacon" or "TouristBeacon")
+            {
+                var signalName = GetJournalString(payload, "SignalName", "SignalName_Localised");
+                var spawningFaction = GetJournalString(payload, "SpawningFaction");
+                var beaconSystemName = GetJournalString(payload, "StarSystem", "SystemName");
+                if (!string.IsNullOrWhiteSpace(beaconSystemName))
+                {
+                    var beaconName = signalName ?? (signalType == "NavBeacon" ? "Nav Beacon" : "Tourist Beacon");
+                    var beaconOwner = spawningFaction ?? string.Empty;
+                    var beaconId = new BeaconScanId(Guid.NewGuid());
+                    var systemAddress = GetJournalInt64(payload, "SystemAddress", out var systemAddressValue)
+                        ? (long?)systemAddressValue
+                        : null;
+                    var observedAt = GetJournalDateTimeOffset(payload, "timestamp")
+                        ?? DateTimeOffset.UtcNow;
+                    var fingerprint = $"FSSSignalDiscovered:{beaconSystemName}:{beaconName}:{beaconOwner}:{signalType}:{observedAt.UtcDateTime:O}";
+
+                    await EnsureSystemAsync(starSystemRepository, beaconSystemName, cancellationToken);
+
+                    await beaconRepository!.SaveAsync(new BeaconScan(
+                        beaconId,
+                        beaconName,
+                        signalType,
+                        beaconOwner,
+                        beaconSystemName,
+                        systemAddress,
+                        observedAt,
+                        fingerprint), cancellationToken);
+                }
             }
 
             return;
