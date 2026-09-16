@@ -367,6 +367,23 @@ public sealed class JournalWatcher : IDisposable
         }
     }
 
+    /// <summary>
+    /// Clears internal tracking state and triggers a full re-scan of all journal files.
+    /// Useful after database reset or when import tracker was cleared.
+    /// </summary>
+    public async Task<JournalScanResult> ResetAndRescanAsync(CancellationToken cancellationToken = default)
+    {
+        lock (_offsets)
+        {
+            _offsets.Clear();
+        }
+        lock (_fullyImported)
+        {
+            _fullyImported.Clear();
+        }
+        return await ScanDirectoryAsync(cancellationToken);
+    }
+
     public void Dispose()
     {
         _cts.Cancel();

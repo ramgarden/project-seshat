@@ -145,7 +145,7 @@
                 <Setter Property="Foreground" Value="#FFFFFF" />
               </Style>
             </Button.Styles>
-            <TextBlock Text="Reset Database" />
+            <TextBlock Text="Reimport Journals" />
           </Button>
         </StackPanel>
         <TextBlock Text="{Binding CommunityDiscoverySummary}" Foreground="#7FCFB0" FontSize="13" TextWrapping="Wrap" IsVisible="{Binding CommunityAvailable}" />

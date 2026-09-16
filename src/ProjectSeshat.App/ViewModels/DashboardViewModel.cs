@@ -1,12 +1,10 @@
 using System;
 using System.Collections.Generic;
-using System.IO;
 using System.Linq;
+using System.Threading.Tasks;
 using System.Windows.Input;
-using Microsoft.EntityFrameworkCore;
 using ProjectSeshat.Community;
 using ProjectSeshat.Core.Contracts;
-using ProjectSeshat.Data;
 using ProjectSeshat.Journals;
 
 namespace ProjectSeshat.App.ViewModels;
@@ -23,7 +21,6 @@ public sealed class DashboardViewModel : ViewModelBase
     private readonly IObservationRepository? _observationRepository;
     private readonly JournalPathResolver _journalPathResolver;
     private readonly CommunityService? _communityService;
-    private readonly string _databasePath;
 
     private string _statusMessage = "Watching for journal changes";
     private string _journalPathStatus = "Searching for journal files";
@@ -47,7 +44,8 @@ public sealed class DashboardViewModel : ViewModelBase
         ICodexEntryRepository? codexEntryRepository = null,
         IObservationRepository? observationRepository = null,
         CommunityService? communityService = null,
-        string? databasePath = null)
+        string? databasePath = null,
+        Func<Task<JournalScanResult>>? resetAndReimportCallback = null)
     {
         _starSystemRepository = starSystemRepository;
         _commanderRepository = commanderRepository;
@@ -57,7 +55,6 @@ public sealed class DashboardViewModel : ViewModelBase
         _codexEntryRepository = codexEntryRepository;
         _observationRepository = observationRepository;
         _journalPathResolver = journalPathResolver ?? new JournalPathResolver();
-        _databasePath = databasePath ?? App.ResolveDatabasePath();
 
         _communityService = communityService;
         if (_communityService is not null)
@@ -78,7 +75,7 @@ public sealed class DashboardViewModel : ViewModelBase
         StartCommunityCommand = new RelayCommand(() => _communityService?.Start());
         StopCommunityCommand = new RelayCommand(() => _communityService?.Stop());
         ToggleCommunityCommand = new RelayCommand(ToggleCommunity);
-        ResetDatabaseCommand = new RelayCommand(ResetDatabase);
+        ResetDatabaseCommand = new RelayCommand(async () => await ResetAndReimportAsync(resetAndReimportCallback));
 
         RefreshCommunityStatus();
 
@@ -253,41 +250,30 @@ public sealed class DashboardViewModel : ViewModelBase
         OnPropertyChanged(nameof(HasCommunityError));
     }
 
-    private void ResetDatabase()
+    private async Task ResetAndReimportAsync(Func<Task<JournalScanResult>>? callback)
     {
+        if (callback is null)
+        {
+            StatusMessage = "Reset unavailable — missing reimport handler";
+            return;
+        }
+
+        StatusMessage = "Clearing import tracker and re-scanning journals...";
+        
         try
         {
-            // Stop the journal watcher first if it's running
-            // Note: We can't easily access the watcher from here, but deleting the DB will work
+            var result = await callback();
+            StatusMessage = result.LinesImported > 0
+                ? $"Reimport complete — {result.LinesImported} new journal line{(result.LinesImported == 1 ? "" : "s")} from {result.FilesChanged} file{(result.FilesChanged == 1 ? "" : "s")}"
+                : "Reimport complete — no new lines found";
             
-            // Close any existing connections and delete the database file
-            if (File.Exists(_databasePath))
-            {
-                File.Delete(_databasePath);
-            }
-
-            // Also delete WAL/SHM files if they exist
-            var walPath = _databasePath + "-wal";
-            var shmPath = _databasePath + "-shm";
-            if (File.Exists(walPath)) File.Delete(walPath);
-            if (File.Exists(shmPath)) File.Delete(shmPath);
-
-            StatusMessage = "Database reset — restart the app to re-import journals";
-            SeshatLog.Info($"Database reset: deleted {_databasePath}");
-
-            // Reset all counts to zero
-            SystemsIndexedCount = 0;
-            CommanderRecordsCount = 0;
-            EvidenceRecordsCount = 0;
-            BodiesIndexedCount = 0;
-            BeaconCount = 0;
-            CodexEntriesCount = 0;
-            ObservationsCount = 0;
+            // Stats will be refreshed by the callback
+            RefreshStats();
         }
         catch (Exception ex)
         {
-            SeshatLog.LogError(ex, "Failed to reset database");
-            StatusMessage = $"Reset failed: {ex.Message}";
+            SeshatLog.LogError(ex, "Reset and reimport failed");
+            StatusMessage = $"Reimport failed: {ex.Message}";
         }
     }
 

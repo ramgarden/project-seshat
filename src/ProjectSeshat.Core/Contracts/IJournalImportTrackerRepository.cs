@@ -7,4 +7,6 @@ public interface IJournalImportTrackerRepository
     Task<bool> HasImportedByFingerprintAsync(string fingerprint, CancellationToken cancellationToken = default);
 
     Task MarkImportedAsync(string filePath, string fingerprint, CancellationToken cancellationToken = default);
+
+    Task ClearAllAsync(CancellationToken cancellationToken = default);
 }

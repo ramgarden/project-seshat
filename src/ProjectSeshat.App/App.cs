@@ -102,7 +102,8 @@ public sealed class App : Application
             communityService,
             new WindowsSpeechVoicePinger(),
             keyAutomation,
-            databasePath);
+            databasePath,
+            importTrackerRepository);
 
         return viewModel;
     }

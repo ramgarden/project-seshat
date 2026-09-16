@@ -39,4 +39,9 @@ public sealed class JournalImportTrackerRepository : IJournalImportTrackerReposi
     }
 
     private static string Normalize(string filePath) => filePath.Trim().ToLowerInvariant();
+
+    public async Task ClearAllAsync(CancellationToken cancellationToken = default)
+    {
+        await _context.JournalImportTrackers.ExecuteDeleteAsync(cancellationToken);
+    }
 }

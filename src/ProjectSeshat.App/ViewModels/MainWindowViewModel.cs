@@ -1,4 +1,5 @@
 using System;
+using System.Threading.Tasks;
 using System.Windows.Input;
 using ProjectSeshat.App.Elite;
 using ProjectSeshat.Atlas;
@@ -23,6 +24,7 @@ public sealed class MainWindowViewModel : ViewModelBase
     private bool _isGalaxyMapActive;
     private bool _isKeybindSetupActive;
     private readonly JournalWatcher? _journalWatcher;
+    private readonly IJournalImportTrackerRepository? _importTrackerRepository;
     private readonly IVoicePinger? _voicePinger;
     private readonly KeyAutomationService? _keyAutomation;
     private bool _overlayVisible;
@@ -48,8 +50,12 @@ public sealed class MainWindowViewModel : ViewModelBase
         CommunityService? communityService = null,
         IVoicePinger? voicePinger = null,
         KeyAutomationService? keyAutomation = null,
-        string? databasePath = null)
+        string? databasePath = null,
+        IJournalImportTrackerRepository? importTrackerRepository = null)
     {
+        _journalWatcher = journalWatcher;
+        _importTrackerRepository = importTrackerRepository;
+
         Dashboard = new DashboardViewModel(
             starSystemRepository,
             commanderRepository,
@@ -60,7 +66,8 @@ public sealed class MainWindowViewModel : ViewModelBase
             codexEntryRepository,
             observationRepository,
             communityService,
-            databasePath);
+            databasePath,
+            ResetAndReimportAsync);
 
         SearchGuide = new SearchGuideViewModel(
             atlasService,
@@ -315,6 +322,42 @@ public sealed class MainWindowViewModel : ViewModelBase
         IsThreadsActive = CurrentPage == Threads;
         IsGalaxyMapActive = CurrentPage == GalaxyMap;
         IsKeybindSetupActive = CurrentPage == KeybindSetup;
+    }
+
+    /// <summary>
+    /// Clears the import tracker and triggers a full re-scan of all journal files.
+    /// This rebuilds the database from scratch without requiring an app restart.
+    /// </summary>
+    public async Task<JournalScanResult> ResetAndReimportAsync()
+    {
+        try
+        {
+            // Clear the import tracker so all files are re-processed
+            if (_importTrackerRepository is not null)
+            {
+                await _importTrackerRepository.ClearAllAsync();
+            }
+
+            // Reset journal watcher state and do full re-scan
+            if (_journalWatcher is not null)
+            {
+                var result = await _journalWatcher.ResetAndRescanAsync();
+                
+                // Refresh all views with the new data
+                Dashboard.RefreshStats();
+                SearchGuide.Refresh();
+                GalaxyMap.Refresh();
+                Survey.Refresh();
+                Exploration.RefreshExploreView();
+                
+                return result;
+            }
+        }
+        catch (Exception ex)
+        {
+            SeshatLog.LogError(ex, "Reset and reimport failed");
+        }
+        return new JournalScanResult(0, 0);
     }
 
     private sealed class RelayCommand(Action execute) : ICommand
